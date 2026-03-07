@@ -10,35 +10,27 @@
 
   <style>
     :root{
-      --gold:#e6c15a;
-      --gold-bright:#ffd88a;
-      --deep-black:#0b0a08;
-      --ink:#f4f1ea;
-      --muted:rgba(244,241,234,.72);
-      --panel: rgba(22, 18, 14, 0.92);
-      --border: rgba(255, 216, 138, 0.20);
-      --sidebar: rgba(10, 9, 7, 0.92);
+      /* Nueva paleta de colores azules y blancos */
+      --blue-main: #4facfe;
+      --blue-light: #8fd3f4;
+      --blue-dark: #1e3a8a;
+      --text-main: #2c3e50;
+      --muted: rgba(44, 62, 80, 0.65);
+      --panel: rgba(255, 255, 255, 0.85);
+      --border: rgba(79, 172, 254, 0.25);
+      --sidebar: rgba(255, 255, 255, 0.95);
     }
 
     body{
       min-height:100vh;
       margin:0;
       font-family:'Lora', serif;
+      /* Fondo degradado claro */
       background:
-        radial-gradient(circle at 35% 25%, rgba(255, 177, 85, 0.18) 0%, rgba(11,10,8,0) 55%),
-        radial-gradient(circle at center, #1a1712 0%, var(--deep-black) 100%);
+        radial-gradient(circle at 35% 25%, #ffffff 0%, #e0f2fe 55%),
+        radial-gradient(circle at center, #f0f8ff 0%, #bae6fd 100%);
       background-attachment:fixed;
-      color: var(--ink);
-    }
-
-    body::before{
-      content:"";
-      position: fixed;
-      inset:0;
-      opacity:.05;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 40 40'%3E%3Cpath d='M18 4h4v10h10v4H22v18h-4V18H8v-4h10V4z' fill='%23ffffff'/%3E%3C/svg%3E");
-      pointer-events:none;
-      z-index:0;
+      color: var(--text-main);
     }
 
     .app-shell{
@@ -53,30 +45,31 @@
       width: 280px;
       background: var(--sidebar);
       border-right: 1px solid var(--border);
-      border-left: 4px solid var(--gold);
+      border-left: 4px solid var(--blue-main);
       padding: 22px 16px;
+      backdrop-filter: blur(10px);
     }
 
     .brand{
       display:flex; align-items:center; gap:12px;
       padding: 10px 10px 18px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(30, 58, 138, 0.1);
       margin-bottom: 14px;
     }
     .logo{
       display:inline-grid; place-items:center;
       width:44px; height:44px;
-      border:1px solid rgba(255, 216, 138, 0.65);
+      border:1px solid rgba(79, 172, 254, 0.5);
       border-radius:50%;
-      color:var(--gold);
-      box-shadow:0 0 22px rgba(255, 177, 85, 0.12);
-      background: rgba(0,0,0,.10);
+      color:var(--blue-main);
+      box-shadow:0 0 22px rgba(79, 172, 254, 0.2);
+      background: #ffffff;
       flex: 0 0 auto;
     }
     .brand-title{
       margin:0;
       font-family:'Cinzel', serif;
-      color: var(--gold);
+      color: var(--blue-dark);
       letter-spacing: 2px;
       font-weight: 700;
       text-transform: uppercase;
@@ -85,12 +78,12 @@
     }
     .brand-sub{
       margin:0;
-      color: rgba(244,241,234,.70);
+      color: var(--muted);
       font-size: .88rem;
     }
 
     .nav-parroquia .nav-link{
-      color: rgba(244,241,234,.80);
+      color: var(--text-main);
       border-radius: 10px;
       padding: 10px 12px;
       margin-bottom: 6px;
@@ -99,16 +92,18 @@
       display:flex;
       align-items:center;
       gap:10px;
+      transition: all 0.2s ease;
     }
     .nav-parroquia .nav-link:hover{
-      color: var(--ink);
-      background: rgba(255,216,138,0.06);
-      border-color: rgba(255,216,138,0.20);
+      color: var(--blue-dark);
+      background: rgba(79, 172, 254, 0.1);
+      border-color: var(--border);
     }
     .nav-parroquia .nav-link.active{
-      background: rgba(255,216,138,0.10);
-      border-color: rgba(255,216,138,0.35);
-      color: var(--ink);
+      background: rgba(79, 172, 254, 0.15);
+      border-color: rgba(79, 172, 254, 0.4);
+      color: var(--blue-dark);
+      font-weight: 600;
     }
 
     /* Main */
@@ -127,64 +122,83 @@
 
     .topbar-title{
       font-family:'Cinzel', serif;
-      color: var(--gold);
+      color: var(--blue-dark);
       letter-spacing: 1px;
       font-weight: 700;
       margin:0;
     }
     .topbar-sub{
-      color: rgba(244,241,234,.70);
+      color: var(--muted);
       margin:0;
       font-size: .92rem;
     }
 
     .chip{
-      border: 1px solid rgba(255,216,138,0.30);
-      background: rgba(0,0,0,.12);
-      color: rgba(244,241,234,.85);
-      padding: 8px 10px;
+      border: 1px solid rgba(79, 172, 254, 0.4);
+      background: #ffffff;
+      color: var(--text-main);
+      padding: 8px 12px;
       border-radius: 999px;
       font-size: .85rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.05);
     }
 
     .btn-parroquia{
-      background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
-      color: #241a0a;
+      background: linear-gradient(180deg, var(--blue-light) 0%, var(--blue-main) 100%);
+      color: #ffffff;
       border: 0;
       border-radius: 10px;
       font-weight: 800;
-      box-shadow: 0 12px 28px rgba(0,0,0,.35);
+      box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+      transition: all 0.25s ease;
     }
-    .btn-parroquia:hover{ filter: brightness(1.03); transform: translateY(-1px); }
+    .btn-parroquia:hover{ 
+      filter: brightness(1.05); 
+      transform: translateY(-1px); 
+      color: #ffffff;
+    }
 
     .btn-outline-parroquia{
-      border: 1px solid rgba(255, 216, 138, 0.55);
-      color: rgba(244,241,234,.85);
+      border: 1px solid rgba(79, 172, 254, 0.6);
+      color: var(--blue-dark);
       border-radius: 10px;
-      background: rgba(0,0,0,.12);
+      background: transparent;
+      transition: all 0.25s ease;
+      font-weight: 600;
     }
     .btn-outline-parroquia:hover{
-      border-color: rgba(255, 216, 138, 0.90);
-      color: var(--ink);
+      border-color: var(--blue-main);
+      background: var(--blue-main);
+      color: #ffffff;
     }
 
     /* Cards */
     .card-parroquia{
       background: var(--panel);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border);
-      border-left: 4px solid var(--gold);
+      border-left: 4px solid var(--blue-main);
       border-radius: 14px;
-      box-shadow: 0 40px 90px rgba(0,0,0,.45);
+      box-shadow: 0 15px 35px rgba(30, 58, 138, 0.08);
       overflow:hidden;
     }
-    .card-parroquia .card-body{ color: rgba(244,241,234,.92); }
+    .card-parroquia .card-body{ color: var(--text-main); }
 
     .kpi{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-    .kpi .label{ color: rgba(244,241,234,.70); font-size: .9rem; }
-    .kpi .value{ font-family:'Cinzel', serif; font-weight:700; color: var(--gold); font-size: 1.5rem; }
-    .kpi .mini{ color: rgba(244,241,234,.70); font-size: .85rem; }
+    .kpi .label{ color: var(--muted); font-size: .9rem; font-weight: 600;}
+    .kpi .value{ font-family:'Cinzel', serif; font-weight:700; color: var(--blue-dark); font-size: 1.5rem; }
+    .kpi .mini{ color: var(--muted); font-size: .85rem; }
+
+    /* Alertas */
+    .alert-success {
+      background: rgba(79, 172, 254, 0.1);
+      border: 1px solid rgba(79, 172, 254, 0.3);
+      color: var(--blue-dark);
+      border-radius: 8px;
+    }
 
     /* Responsive */
     @media (max-width: 992px){
@@ -203,8 +217,9 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="logo" aria-hidden="true">
-        <svg width="20" height="26" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 0H14V8H24V12H14V32H10V12H0V8H10V0Z" fill="currentColor"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
         </svg>
       </div>
       <div>
@@ -222,7 +237,7 @@
       </a>
     </nav>
 
-    <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.06);">
+    <div class="mt-3 pt-3" style="border-top:1px solid rgba(30, 58, 138, 0.1);">
       <form method="POST" action="{{ route('logout') }}">
         @csrf
         <button class="btn btn-outline-parroquia btn-sm w-100" type="submit">Salir</button>
@@ -247,7 +262,7 @@
     </div>
 
     @if(session('status'))
-      <div class="alert alert-success">{{ session('status') }}</div>
+      <div class="alert alert-success py-2">{{ session('status') }}</div>
     @endif
 
     @yield('content')

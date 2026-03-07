@@ -10,34 +10,26 @@
 
   <style>
     :root{
-      --gold:#e6c15a;
-      --gold-bright:#ffd88a;
-      --deep-black:#0b0a08;
-      --ink:#f4f1ea;
-      --muted:rgba(244,241,234,.72);
-      --panel: rgba(22, 18, 14, 0.92);
-      --border: rgba(255, 216, 138, 0.20);
+      /* Nueva paleta de colores azules y blancos */
+      --blue-main: #4facfe;
+      --blue-light: #8fd3f4;
+      --blue-dark: #1e3a8a;
+      --text-main: #2c3e50;
+      --muted: rgba(44, 62, 80, 0.65);
+      --panel: rgba(255, 255, 255, 0.85);
+      --border: rgba(79, 172, 254, 0.25);
     }
 
     body{
       min-height:100vh;
       margin:0;
       font-family:'Lora', serif;
+      /* Fondo degradado claro */
       background:
-        radial-gradient(circle at 35% 25%, rgba(255, 177, 85, 0.18) 0%, rgba(11,10,8,0) 55%),
-        radial-gradient(circle at center, #1a1712 0%, var(--deep-black) 100%);
+        radial-gradient(circle at 35% 25%, #ffffff 0%, #e0f2fe 55%),
+        radial-gradient(circle at center, #f0f8ff 0%, #bae6fd 100%);
       background-attachment:fixed;
-      color: var(--ink);
-    }
-
-    body::before{
-      content:"";
-      position: fixed;
-      inset:0;
-      opacity:.05;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 40 40'%3E%3Cpath d='M18 4h4v10h10v4H22v18h-4V18H8v-4h10V4z' fill='%23ffffff'/%3E%3C/svg%3E");
-      pointer-events:none;
-      z-index:0;
+      color: var(--text-main);
     }
 
     .parroquia-shell{
@@ -62,17 +54,17 @@
       display:inline-grid;
       place-items:center;
       width:44px; height:44px;
-      border:1px solid rgba(255, 216, 138, 0.65);
+      border:1px solid rgba(79, 172, 254, 0.5);
       border-radius:50%;
-      color:var(--gold);
-      box-shadow:0 0 22px rgba(255, 177, 85, 0.12);
-      background: rgba(0,0,0,.10);
+      color:var(--blue-main);
+      box-shadow:0 0 22px rgba(79, 172, 254, 0.2);
+      background: #ffffff;
     }
 
     .brand-title{
       margin:0;
       font-family:'Cinzel', serif;
-      color: var(--gold);
+      color: var(--blue-dark);
       letter-spacing: 2px;
       font-weight: 700;
       text-transform: uppercase;
@@ -81,129 +73,143 @@
     }
     .brand-sub{
       margin:0;
-      color: rgba(244,241,234,.70);
+      color: var(--muted);
       font-size: .90rem;
     }
 
     .btn-parroquia{
-      background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
-      color: #241a0a;
+      background: linear-gradient(180deg, var(--blue-light) 0%, var(--blue-main) 100%);
+      color: #ffffff;
       border: 0;
       border-radius: 10px;
       font-weight: 800;
       letter-spacing: .3px;
-      box-shadow: 0 12px 28px rgba(0,0,0,.35);
+      box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+      transition: all 0.25s ease;
     }
-    .btn-parroquia:hover{ filter: brightness(1.03); transform: translateY(-1px); }
+    .btn-parroquia:hover{ 
+      filter: brightness(1.05); 
+      transform: translateY(-1px); 
+      color: #ffffff;
+    }
 
     .btn-outline-parroquia{
-      border: 1px solid rgba(255, 216, 138, 0.55);
-      color: rgba(244,241,234,.85);
+      border: 1px solid rgba(79, 172, 254, 0.6);
+      color: var(--blue-dark);
       border-radius: 10px;
-      background: rgba(0,0,0,.12);
+      background: transparent;
+      transition: all 0.25s ease;
+      font-weight: 600;
     }
     .btn-outline-parroquia:hover{
-      border-color: rgba(255, 216, 138, 0.90);
-      color: var(--ink);
+      border-color: var(--blue-main);
+      background: var(--blue-main);
+      color: #ffffff;
     }
 
     .card-parroquia{
       background: var(--panel);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border);
-      border-left: 4px solid var(--gold);
+      border-left: 4px solid var(--blue-main);
       border-radius: 12px;
-      box-shadow: 0 40px 90px rgba(0,0,0,.55);
+      box-shadow: 0 15px 35px rgba(30, 58, 138, 0.08);
       overflow: hidden;
     }
 
     .card-parroquia .card-header{
-      background: rgba(0,0,0,.15);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      color: rgba(244,241,234,.90);
+      background: rgba(79, 172, 254, 0.08);
+      border-bottom: 1px solid var(--border);
+      color: var(--blue-dark);
+      font-weight: 600;
     }
 
+    /* Mantuve el nombre de clase badge-gold para que no se rompan tus vistas, 
+       pero le di estilos azules acordes al nuevo diseño */
     .badge-gold{
-      background: var(--gold);
-      color: #241a0a;
+      background: var(--blue-main);
+      color: #ffffff;
       font-weight: 800;
     }
     .badge-muted{
-      background: rgba(255,255,255,.10);
-      border: 1px solid rgba(255,255,255,.12);
-      color: rgba(244,241,234,.85);
+      background: rgba(79, 172, 254, 0.1);
+      border: 1px solid rgba(79, 172, 254, 0.2);
+      color: var(--blue-dark);
     }
 
-    .table-dark{
-      --bs-table-bg: rgba(0,0,0,.35);
-      --bs-table-color: rgba(244,241,234,.95);
+    /* Estilos de tablas adaptados al tema claro */
+    .table{
+      --bs-table-bg: transparent;
+      --bs-table-color: var(--text-main);
     }
-
     .table td, .table th{
-      border-color: rgba(255,255,255,0.06) !important;
-      color: rgba(244,241,234,.90);
+      border-color: rgba(79, 172, 254, 0.15) !important;
+      color: var(--text-main);
     }
-
+    .table thead th{
+      color: var(--blue-dark) !important;
+      background: rgba(79, 172, 254, 0.05) !important;
+    }
     .table-hover tbody tr:hover{
-      background: rgba(255, 216, 138, 0.06) !important;
+      background: rgba(79, 172, 254, 0.06) !important;
     }
 
     .input-group-text{
-      background: rgba(0,0,0,.20);
-      border-color: rgba(255, 216, 138, 0.25);
-      color: rgba(244,241,234,.85);
+      background: rgba(79, 172, 254, 0.08);
+      border-color: rgba(79, 172, 254, 0.3);
+      color: var(--blue-dark);
+      font-weight: 600;
     }
     .form-control{
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 216, 138, 0.25);
-      color: var(--ink);
+      background: #ffffff;
+      border: 1px solid rgba(79, 172, 254, 0.3);
+      color: var(--text-main);
     }
     .form-control:focus{
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 216, 138, 0.70);
-      box-shadow: 0 0 0 .25rem rgba(255, 177, 85, 0.12);
-      color: var(--ink);
+      background: #ffffff;
+      border-color: var(--blue-main);
+      box-shadow: 0 0 0 .25rem rgba(79, 172, 254, 0.15);
+      color: var(--text-main);
     }
 
     .alert-success{
       background: rgba(46, 204, 113, 0.10);
       border: 1px solid rgba(46, 204, 113, 0.25);
-      color: rgba(244,241,234,.95);
+      color: #1e6b3b;
     }
     .alert-info{
-      background: rgba(255, 216, 138, 0.10);
-      border: 1px solid rgba(255, 216, 138, 0.25);
-      color: rgba(244,241,234,.95);
+      background: rgba(79, 172, 254, 0.10);
+      border: 1px solid rgba(79, 172, 254, 0.25);
+      color: var(--blue-dark);
     }
 
-    .text-muted{ color: rgba(244,241,234,.70) !important; }
+    .text-muted{ color: var(--muted) !important; }
 
+    /* ===== Forzar texto de tablas al color del tema (reemplazo del anterior) ===== */
+    #pendientesTable tbody td{
+      color: var(--text-main) !important;
+      opacity: 1 !important;
+    }
 
+    #pendientesTable tbody td span,
+    #pendientesTable tbody td small,
+    #pendientesTable tbody td a,
+    #pendientesTable tbody td div{
+      color: var(--text-main) !important;
+      opacity: 1 !important;
+    }
 
-    /* ===== Forzar texto negro en las filas ===== */
-#pendientesTable tbody td{
-  color: #000 !important;
-  opacity: 1 !important;
-}
+    #pendientesTable tbody .badge{
+      color: #ffffff !important;
+      opacity: 1 !important;
+    }
+    #pendientesTable tbody .badge.badge-muted{
+      color: var(--blue-dark) !important;
+    }
 
-/* Por si hay spans/a/small con text-muted o estilos heredados */
-#pendientesTable tbody td span,
-#pendientesTable tbody td small,
-#pendientesTable tbody td a,
-#pendientesTable tbody td div{
-  color: #000 !important;
-  opacity: 1 !important;
-}
-
-/* Mantener badges con su estilo (solo ajusto texto del badge si hiciera falta) */
-#pendientesTable tbody .badge{
-  color: #241a0a !important;
-  opacity: 1 !important;
-}
-
-/* Encabezado sigue claro */
-#pendientesTable thead th{
-  color: rgba(244,241,234,.95) !important;
-}
+    #pendientesTable thead th{
+      color: var(--blue-dark) !important;
+    }
   </style>
 </head>
 <body>
@@ -213,8 +219,9 @@
   <div class="parroquia-topbar">
     <div class="brand">
       <div class="logo-container" aria-hidden="true">
-        <svg width="20" height="26" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 0H14V8H24V12H14V32H10V12H0V8H10V0Z" fill="currentColor"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
         </svg>
       </div>
       <div>

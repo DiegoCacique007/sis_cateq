@@ -12,37 +12,29 @@
 
   <style>
     :root{
-      --gold:#e6c15a;
-      --gold-bright:#ffd88a;
-      --amber:#ffb155;
-      --deep-black:#0b0a08;
-      --ink:#f4f1ea;
-      --muted:rgba(244,241,234,.72);
+      /* Paleta de colores azules y blancos */
+      --blue-main: #4facfe;
+      --blue-light: #8fd3f4;
+      --blue-dark: #1e3a8a;
+      --bg-light: #f0f8ff;
+      --text-main: #2c3e50;
+      --muted: rgba(44, 62, 80, 0.65);
     }
 
     body{
       min-height:100vh;
       margin:0;
       font-family:'Lora', serif;
+      /* Fondo degradado claro */
       background:
-        radial-gradient(circle at 35% 25%, rgba(255, 177, 85, 0.18) 0%, rgba(11,10,8,0) 55%),
-        radial-gradient(circle at center, #1a1712 0%, var(--deep-black) 100%);
+        radial-gradient(circle at 35% 25%, #ffffff 0%, #e0f2fe 55%),
+        radial-gradient(circle at center, #f0f8ff 0%, #bae6fd 100%);
       background-attachment:fixed;
       overflow:hidden;
       display:flex;
       align-items:center;
       justify-content:center;
       position:relative;
-    }
-
-    body::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      opacity:.05;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 40 40'%3E%3Cpath d='M18 4h4v10h10v4H22v18h-4V18H8v-4h10V4z' fill='%23ffffff'/%3E%3C/svg%3E");
-      z-index:1;
-      pointer-events:none;
     }
 
     .stage{
@@ -57,16 +49,18 @@
 
     .card-3d{
       width:min(480px, 92%);
-      background:rgba(22, 18, 14, 0.92);
-      backdrop-filter:blur(10px);
-      border-radius:8px;
+      /* Fondo de tarjeta claro y translúcido */
+      background:rgba(255, 255, 255, 0.85);
+      backdrop-filter:blur(12px);
+      border-radius:12px;
 
-      border-left:4px solid var(--gold);
-      border-right:1px solid rgba(255, 216, 138, 0.14);
-      border-top:1px solid rgba(255, 216, 138, 0.14);
-      border-bottom:1px solid rgba(255, 216, 138, 0.14);
+      border-left:4px solid var(--blue-main);
+      border-right:1px solid rgba(79, 172, 254, 0.2);
+      border-top:1px solid rgba(79, 172, 254, 0.2);
+      border-bottom:1px solid rgba(79, 172, 254, 0.2);
 
-      box-shadow:0 40px 90px rgba(0, 0, 0, 0.88);
+      /* Sombra más suave adaptada a tonos claros */
+      box-shadow:0 30px 60px rgba(30, 58, 138, 0.12);
       transform-style:preserve-3d;
       transition:transform 0.4s ease-out;
       position:relative;
@@ -83,16 +77,17 @@
     .logo-container{
       display:inline-block;
       margin-bottom:14px;
-      border:1px solid rgba(255, 216, 138, 0.65);
-      padding:10px;
+      border:1px solid rgba(79, 172, 254, 0.5);
+      padding:12px;
       border-radius:50%;
-      color:var(--gold);
-      box-shadow:0 0 22px rgba(255, 177, 85, 0.12);
+      color:var(--blue-main);
+      box-shadow:0 0 22px rgba(79, 172, 254, 0.2);
+      background: #ffffff;
     }
 
     .system-name{
       font-family:'Cinzel', serif;
-      color:var(--gold);
+      color:var(--blue-dark);
       letter-spacing:2px;
       font-weight:700;
       font-size:1.55rem;
@@ -102,12 +97,12 @@
 
     .subtitle{
       margin: 10px 0 0 0;
-      color: rgba(244,241,234,.70);
+      color: var(--muted);
       font-size: .95rem;
     }
 
     .form-label{
-      color:var(--gold);
+      color:var(--blue-dark);
       font-size:0.85rem;
       font-weight:700;
       text-transform:uppercase;
@@ -115,31 +110,37 @@
     }
 
     .form-control{
-      background:rgba(255, 255, 255, 0.08);
-      border:1px solid rgba(255, 216, 138, 0.35);
+      background:rgba(79, 172, 254, 0.04);
+      border:1px solid rgba(79, 172, 254, 0.3);
       border-radius:6px;
-      color:var(--ink);
+      color:var(--text-main);
       padding:12px 12px;
       transition:all 0.25s ease;
     }
 
     .form-control:focus{
-      background:rgba(255, 255, 255, 0.12);
-      border-color:var(--gold-bright);
-      box-shadow:0 0 0 4px rgba(255, 177, 85, 0.10);
-      color:var(--ink);
+      background:rgba(255, 255, 255, 0.9);
+      border-color:var(--blue-main);
+      box-shadow:0 0 0 4px rgba(79, 172, 254, 0.15);
+      color:var(--text-main);
+    }
+
+    /* Asegurar que las opciones del select se vean bien */
+    select.form-control option {
+      color: var(--text-main);
+      background: #ffffff;
     }
 
     .form-control::placeholder{
-      color:rgba(244, 241, 234, 0.65) !important;
+      color:rgba(44, 62, 80, 0.45) !important;
       opacity:1;
       font-style:italic;
       font-size:0.92rem;
     }
 
     .btn-church{
-      background:linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
-      color:#241a0a;
+      background:linear-gradient(180deg, var(--blue-light) 0%, var(--blue-main) 100%);
+      color:#ffffff;
       border:none;
       border-radius:8px;
       padding:12px;
@@ -148,46 +149,48 @@
       letter-spacing:1px;
       transition:0.25s ease;
       margin-top:10px;
-      box-shadow:0 12px 28px rgba(0,0,0,.35);
+      box-shadow:0 8px 20px rgba(79, 172, 254, 0.3);
     }
 
     .btn-church:hover{
-      filter:brightness(1.03);
+      filter:brightness(1.05);
       transform:translateY(-2px);
-      box-shadow:0 16px 34px rgba(0,0,0,.42);
+      box-shadow:0 12px 26px rgba(79, 172, 254, 0.4);
+      color:#ffffff;
     }
 
     .footer-links{
       margin-top:18px;
       text-align:center;
       font-size:0.9rem;
-      border-top:1px solid rgba(255,255,255,0.06);
+      border-top:1px solid rgba(30, 58, 138, 0.08);
       padding-top:16px;
-      color: rgba(244,241,234,.70);
+      color: var(--muted);
     }
 
-    .footer-links a{ color:var(--muted); text-decoration:none; }
-    .footer-links a:hover{ color:var(--gold-bright); }
+    .footer-links a{ color:var(--muted); text-decoration:none; transition: 0.2s; font-weight: 600;}
+    .footer-links a:hover{ color:var(--blue-main); }
 
     .corner{
       position:absolute; width:16px; height:16px;
-      border:1px solid rgba(255, 216, 138, 0.35);
+      border:2px solid rgba(79, 172, 254, 0.4);
       pointer-events:none;
     }
-    .top-left{ top:12px; left:12px; border-right:none; border-bottom:none; }
-    .bottom-right{ bottom:12px; right:12px; border-left:none; border-top:none; }
+    .top-left{ top:12px; left:12px; border-right:none; border-bottom:none; border-radius: 4px 0 0 0; }
+    .bottom-right{ bottom:12px; right:12px; border-left:none; border-top:none; border-radius: 0 0 4px 0; }
 
     .alert-error{
-      background: rgba(255, 0, 0, 0.08);
+      background: rgba(255, 70, 70, 0.08);
       border: 1px solid rgba(255, 120, 120, 0.25);
-      color: var(--ink);
+      color: #b91c1c;
       border-radius: 8px;
     }
 
     .hint{
-      color: rgba(244,241,234,.70);
+      color: var(--muted);
       font-size: .88rem;
       margin-top: 6px;
+      font-style: italic;
     }
   </style>
 </head>
@@ -201,12 +204,12 @@
       <div class="layer">
         <div class="church-header">
           <div class="logo-container" aria-hidden="true">
-            <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 0H14V8H24V12H14V32H10V12H0V8H10V0Z" fill="currentColor"/>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
           <h1 class="system-name">Sis_Cateq</h1>
-
         </div>
 
         @if ($errors->any())
@@ -228,19 +231,20 @@
           <div class="mb-4">
             <label class="form-label">Correo</label>
             <input type="email" name="email" class="form-control"
-                   value="{{ old('email') }}" placeholder="ejemplo@parroquia.org.mx"
+                   value="{{ old('email') }}" placeholder="ejemplo@correo.com"
                    required autocomplete="username">
           </div>
 
-          {{-- ✅ NUEVO: Solicitud de rol --}}
+          {{-- Solicitud de rol --}}
           <div class="mb-4">
             <label class="form-label">Solicita acceso como</label>
-          <select name="requested_role" class="form-control" required>
-  <option value="catequista" {{ old('requested_role')=='catequista' ? 'selected' : '' }}>Catequista</option>
-  <option value="coord_general" {{ old('requested_role')=='coord_general' ? 'selected' : '' }}>Coordinador General</option>
-  <option value="parroco" {{ old('requested_role')=='parroco' ? 'selected' : '' }}>Parroco</option>
-  <option value="coord_comunidad" {{ old('requested_role')=='coord_comunidad' ? 'selected' : '' }}>Coordinador Comunidad</option>
-</select>
+            <select name="requested_role" class="form-control" required>
+              <option value="" disabled {{ old('requested_role') ? '' : 'selected' }}>Selecciona un rol...</option>
+              <option value="catequista" {{ old('requested_role')=='catequista' ? 'selected' : '' }}>Catequista</option>
+              <option value="coord_general" {{ old('requested_role')=='coord_general' ? 'selected' : '' }}>Coordinador General</option>
+              <option value="parroco" {{ old('requested_role')=='parroco' ? 'selected' : '' }}>Párroco</option>
+              <option value="coord_comunidad" {{ old('requested_role')=='coord_comunidad' ? 'selected' : '' }}>Coordinador Comunidad</option>
+            </select>
             <div class="hint">La Secretaría revisará tu solicitud antes de aprobar el acceso.</div>
           </div>
 
@@ -248,7 +252,6 @@
             <label class="form-label">Contraseña</label>
             <input type="password" name="password" class="form-control"
                    placeholder="Crea una contraseña segura" required autocomplete="new-password">
-          
           </div>
 
           <div class="mb-4">
