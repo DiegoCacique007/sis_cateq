@@ -82,7 +82,7 @@ class RegisteredUserController extends Controller
             // rol real base (no dar privilegios desde registro)
             'role' => 'usuario',
 
-            // ✅ ahora sí se guarda lo elegido (ya normalizado)
+            // ahora sí se guarda lo elegido (ya normalizado)
             'requested_role' => $normalizedRequestedRole,
 
             // estado
