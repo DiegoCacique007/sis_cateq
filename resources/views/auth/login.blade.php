@@ -12,6 +12,9 @@
     {{-- Google Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    {{-- SweetAlert2 CSS --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.min.css">
+
     <style>
         :root{
             --blue-main: #0056b3;
@@ -21,7 +24,6 @@
             --bg-light: #f0f8ff;
             --text-main: #1a2634;
             --text-soft: #596a7b;
-            --muted: rgba(26, 38, 52, 0.6);
             --font-brand: 'Cinzel', serif;
             --font-body: 'Plus Jakarta Sans', sans-serif;
         }
@@ -30,7 +32,7 @@
 
         html, body{
             height: 100%;
-            overflow: hidden; /* Evita el scroll */
+            overflow: hidden;
             margin: 0;
             padding: 0;
         }
@@ -57,9 +59,8 @@
             padding: 20px;
         }
 
-        /* Diseño Horizontal (Split Card) */
         .card-horizontal{
-            width: min(900px, 100%); /* Un poco más angosto que el registro porque tiene menos campos */
+            width: min(900px, 100%);
             max-height: 95vh;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(14px);
@@ -72,13 +73,11 @@
             overflow: hidden;
             transform-style: preserve-3d;
             transition: transform 0.25s ease-out;
-            /* Animación de entrada */
             opacity: 0;
             transform: translateY(30px);
             animation: slideUpFade 0.8s ease forwards;
         }
 
-        /* Panel Izquierdo (Branding) */
         .brand-panel{
             flex: 1;
             background: linear-gradient(135deg, var(--blue-main), var(--blue-dark));
@@ -93,7 +92,6 @@
             overflow: hidden;
         }
 
-        /* Adornos del panel izquierdo */
         .brand-panel::before{
             content: ""; position: absolute; top: -50px; left: -50px;
             width: 200px; height: 200px; border-radius: 50%;
@@ -134,17 +132,15 @@
             z-index: 2;
         }
 
-        /* Panel Derecho (Formulario) */
         .form-panel{
             flex: 1;
             padding: clamp(30px, 5vh, 50px) clamp(30px, 4vw, 50px);
             display: flex;
             flex-direction: column;
             justify-content: center;
-            position: relative; /* Añadido para posicionar el botón de regreso */
+            position: relative;
         }
 
-        /* Botón de regreso */
         .btn-back {
             position: absolute;
             top: 25px;
@@ -169,7 +165,7 @@
             font-size: clamp(1.3rem, 2vw, 1.5rem);
             color: var(--blue-main);
             margin-bottom: 5px;
-            margin-top: 15px; /* Añadido espacio para el botón de regreso */
+            margin-top: 15px;
         }
 
         .form-subtitle{
@@ -208,7 +204,6 @@
             font-style: italic;
         }
 
-        /* Contenedor de Password para el Ojo */
         .password-wrapper {
             position: relative;
         }
@@ -229,7 +224,6 @@
             color: var(--blue-main);
         }
 
-        /* Checkbox personalizado */
         .form-check-input {
             border-color: var(--blue-main);
             cursor: pointer;
@@ -243,7 +237,6 @@
             border-color: var(--blue-main);
         }
 
-        /* Enlaces */
         .auth-link {
             color: var(--blue-main);
             text-decoration: none;
@@ -256,7 +249,6 @@
             text-decoration: underline;
         }
 
-        /* Botón */
         .btn-church{
             background: linear-gradient(135deg, var(--blue-main), var(--blue-dark));
             color: #ffffff;
@@ -283,26 +275,6 @@
             color: var(--text-soft);
         }
 
-        /* Alertas */
-        .alert-parroquia{
-            background: rgba(0, 86, 179, 0.05);
-            border: 1px solid rgba(0, 86, 179, 0.15);
-            color: var(--blue-dark);
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        .alert-error{
-            background: rgba(220, 53, 69, 0.05);
-            border: 1px solid rgba(220, 53, 69, 0.2);
-            color: #dc3545;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        /* Animaciones en cascada */
         .anim-item {
             opacity: 0;
             transform: translateY(15px);
@@ -319,7 +291,31 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Ajuste para móviles */
+        /* Estilos CSS para personalizar las alertas */
+        .swal2-popup-custom {
+            font-family: var(--font-body) !important;
+            border-radius: 16px !important;
+            padding: 1.25rem !important;
+        }
+        .swal2-title-custom {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            color: var(--text-main) !important;
+            margin-top: 10px !important;
+        }
+        .swal2-html-custom {
+            font-size: 0.85rem !important;
+            color: var(--text-soft) !important;
+            margin-top: 5px !important;
+        }
+        .swal2-confirm-custom {
+            border-radius: 50px !important;
+            padding: 8px 25px !important;
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px;
+        }
+
         @media (max-width: 768px){
             html, body { overflow-y: auto; height: auto; min-height: 100vh; }
             .card-horizontal{ flex-direction: column; max-height: none; width: 100%; }
@@ -347,7 +343,6 @@
 
         <div class="form-panel">
 
-            {{-- BOTÓN DE REGRESO A INICIO --}}
             <a href="{{ url('/') }}" class="btn-back anim-item delay-1">
                 <i class="bi bi-arrow-left"></i> Volver al inicio
             </a>
@@ -357,20 +352,7 @@
                 <p class="form-subtitle">Bienvenido de nuevo al sistema.</p>
             </div>
 
-            {{-- Mensaje de éxito (ej. registro enviado) --}}
-            @if (session('status'))
-                <div class="alert alert-parroquia py-2 mb-3 anim-item delay-1" role="alert">
-                    <i class="bi bi-info-circle me-1"></i> {{ session('status') }}
-                </div>
-            @endif
-
-            {{-- Errores de validación --}}
-            @if ($errors->any())
-                <div class="alert alert-error py-2 mb-3 anim-item delay-1" role="alert">
-                    <i class="bi bi-exclamation-triangle me-1"></i> {{ $errors->first() }}
-                </div>
-            @endif
-
+            {{-- FORMULARIO --}}
             <form method="POST" action="{{ route('login') }}">
                 @csrf
 
@@ -438,6 +420,9 @@
     </div>
 </div>
 
+{{-- SweetAlert2 JS --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.all.min.js"></script>
+
 <script>
     // 1. Efecto 3D sutil para escritorio
     const stage = document.getElementById('stage');
@@ -445,7 +430,7 @@
 
     if (stage && tiltCard && window.innerWidth > 768) {
         stage.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth - 0.5) * 8; // Max rotación
+            const x = (e.clientX / window.innerWidth - 0.5) * 8;
             const y = (e.clientY / window.innerHeight - 0.5) * 8;
             tiltCard.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
         });
@@ -462,14 +447,61 @@
             input.type = "text";
             icon.classList.remove("bi-eye-slash");
             icon.classList.add("bi-eye");
-            icon.style.color = "var(--blue-main)"; // Se pinta azul cuando está visible
+            icon.style.color = "var(--blue-main)";
         } else {
             input.type = "password";
             icon.classList.remove("bi-eye");
             icon.classList.add("bi-eye-slash");
-            icon.style.color = "var(--text-soft)"; // Vuelve a gris
+            icon.style.color = "var(--text-soft)";
         }
     }
+
+    // 3. SweetAlert2 - Alertas dinámicas
+    document.addEventListener("DOMContentLoaded", function() {
+
+        const swalConfig = {
+            width: '350px',
+            confirmButtonColor: "#0056b3",
+            scrollbarPadding: false, // <-- Esto evita que el body brinque a los lados
+            heightAuto: false,       // <-- Esto evita que cambie el alto del documento
+            customClass: {
+                popup: 'swal2-popup-custom',
+                title: 'swal2-title-custom',
+                htmlContainer: 'swal2-html-custom',
+                confirmButton: 'swal2-confirm-custom'
+            },
+            buttonsStyling: true,
+            showClass: {
+                popup: 'animate__animated animate__fadeInUp animate__faster'
+            },
+            hideClass: {
+                popup: 'animate__animated animate__fadeOutDown animate__faster'
+            }
+        };
+
+        @if ($errors->any())
+        Swal.fire({
+            ...swalConfig,
+            icon: "error",
+            title: "Error de acceso",
+            text: "{{ $errors->first() }}",
+            confirmButtonText: "Entendido"
+        });
+        @endif
+
+        @if (session('status'))
+        Swal.fire({
+            ...swalConfig,
+            icon: "success",
+            iconColor: "#0056b3",
+            title: "Información",
+            text: "{{ session('status') }}",
+            confirmButtonText: "Continuar"
+        });
+        @endif
+    });
+
 </script>
+
 </body>
 </html>
