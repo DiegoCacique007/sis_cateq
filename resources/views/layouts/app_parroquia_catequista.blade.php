@@ -171,6 +171,10 @@
                     <i class="bi bi-calendar2-check me-2"></i> <span>Asistencias</span> <i class="bi bi-lock-fill ms-auto small"></i>
                 </a>
 
+                <a class="nav-link text-muted" href="#" onclick="alert('Módulo de Calificaciones en desarrollo. Disponible próximamente.'); return false;">
+                    <i class="bi bi-journal-text me-2"></i> <span>Calificaciones</span> <i class="bi bi-lock-fill ms-auto small"></i>
+                </a>
+
             @else
                 <a class="nav-link" href="{{ url('/dashboard') }}">
                     <i class="bi bi-house me-2"></i> <span>Dashboard</span>

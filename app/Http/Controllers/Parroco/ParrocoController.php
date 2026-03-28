@@ -25,7 +25,7 @@ class ParrocoController extends Controller
                     'evaluaciones.unidad_id',
                     'evaluaciones.rubro_id',
                     'evaluaciones.calificacion',
-                    DB::raw("CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno) as inscripcion_nombre"),
+                    DB::raw("CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, '')) as inscripcion_nombre"),
                     'unidades.nombre as unidad_nombre',
                     'rubros.nombre as rubro_nombre'
                 )

@@ -149,7 +149,6 @@
         let pageSize = 10;
         let editandoId = null;
 
-        // Esquema con mapeo correcto
         const dbSchema = {
             comunidades: [ { field: 'comunidad', type: 'text', label: 'Comunidad' } ],
             niveles: [ { field: 'nivel', type: 'text', label: 'Nivel' } ],
@@ -157,10 +156,25 @@
             rubros: [ { field: 'nombre', type: 'text', label: 'Rubro' }, { field: 'valor', type: 'number', step: '0.01', label: '%' } ],
             unidades: [ { field: 'nombre', type: 'text', label: 'Unidad' }, { field: 'numero', type: 'number', label: 'Número' }, { field: 'nivel_id', type: 'fk', label: 'Nivel', fkSource: 'niveles' } ],
             grupos: [ { field: 'nombre', type: 'text', label: 'Grupo' } ],
-            alumnos: [ { field: 'nombre', type: 'text', label: 'Nombre' }, { field: 'apellido_paterno', type: 'text', label: 'Ap. Paterno' }, { field: 'comunidad_id', type: 'fk', label: 'Comunidad', fkSource: 'comunidades' }, { field: 'estado', type: 'select', label: 'Estado', options: [{val: 1, text: 'Activo'}, {val: 0, text: 'Baja'}] } ],
-            tutores: [ { field: 'nombre', type: 'text', label: 'Nombre' }, { field: 'ap', type: 'text', label: 'Ap. Paterno' }, { field: 'alumno_id', type: 'fk', label: 'Alumno', fkSource: 'alumnos' } ],
+
+            alumnos: [
+                { field: 'nombre', type: 'text', label: 'Nombre' },
+                { field: 'apellido_paterno', type: 'text', label: 'Ap. Paterno' },
+                { field: 'apellido_materno', type: 'text', label: 'Ap. Materno' },
+                { field: 'comunidad_id', type: 'fk', label: 'Comunidad', fkSource: 'comunidades' },
+                { field: 'estado', type: 'select', label: 'Estado', options: [{val: 1, text: 'Activo'}, {val: 0, text: 'Baja'}] }
+            ],
+
+            tutores: [
+                { field: 'nombre', type: 'text', label: 'Nombre' },
+                { field: 'ap', type: 'text', label: 'Ap. Paterno' },
+                { field: 'am', type: 'text', label: 'Ap. Materno' },
+                { field: 'alumno_id', type: 'fk', label: 'Alumno', fkSource: 'alumnos' }
+            ],
+
             inscripciones: [ { field: 'alumno_id', type: 'fk', label: 'Alumno', fkSource: 'alumnos' }, { field: 'periodo_id', type: 'fk', label: 'Periodo', fkSource: 'periodos' }, { field: 'grupo_id', type: 'fk', label: 'Grupo', fkSource: 'grupos' } ],
             asigna_grupo: [ { field: 'comunidad_id', type: 'fk', label: 'Comunidad', fkSource: 'comunidades' }, { field: 'grupo_id', type: 'fk', label: 'Grupo', fkSource: 'grupos' }, { field: 'nivel_id', type: 'fk', label: 'Nivel', fkSource: 'niveles' }, { field: 'periodo_id', type: 'fk', label: 'Periodo', fkSource: 'periodos' }, { field: 'catequista_id', type: 'fk', label: 'Catequista', fkSource: 'users' } ],
+
             evaluaciones: [
                 { field: 'inscripcion_id', type: 'fk', label: 'Alumno', fkSource: 'inscripciones' },
                 { field: 'unidad_id', type: 'fk', label: 'Unidad', fkSource: 'unidades' },
@@ -192,7 +206,6 @@
             document.getElementById('contenedor-tablas').style.display = 'block';
             document.getElementById('section-title').innerText = nombresBonitos[tableName];
 
-            // Resetear paginación y buscador al cambiar de sección
             document.getElementById('searchInput').value = '';
             currentPage = 1;
 
@@ -221,10 +234,7 @@
             try {
                 const response = await fetch(`/parroco/${tabla}`);
                 currentTableData = await response.json();
-
-                // Dispara la búsqueda vacía para renderizar todo con paginación la primera vez
                 ejecutarBusqueda();
-
             } catch (error) {
                 tbody.innerHTML = `<tr><td colspan="${schema.length + 2}" class="text-center py-4 text-danger">Error de conexión.</td></tr>`;
             }
@@ -246,29 +256,26 @@
 
             filteredData = currentTableData.filter(row => {
                 if(!query) return true;
+                let isMatch = false;
 
-                // Busca en cada columna, traduciendo IDs a Texto real
+                // Buscamos en TODAS las columnas ya traducidas
                 for(let col of schema) {
                     let val = row[col.field];
 
                     if(col.type === 'fk' && val) {
-                        // Resuelve el texto de FK
-                        if (!isNaN(val)) {
-                            val = getFkText(col.fkSource, val);
-                        }
+                        let campoNombre = col.field.replace('_id', '_nombre');
+                        val = row[campoNombre] ? row[campoNombre] : getFkText(col.fkSource, val);
                     } else if(col.type === 'select') {
                         val = val == 1 ? 'Activo' : 'Inactivo';
                     }
 
                     if(val && String(val).toLowerCase().includes(query)) {
-                        return true;
+                        isMatch = true;
                     }
                 }
 
-                // Búsqueda extra: También por el campo ID directo
-                if(String(row.id).includes(query)) return true;
-
-                return false;
+                if(String(row.id).includes(query)) isMatch = true;
+                return isMatch;
             });
 
             currentPage = 1;
@@ -291,7 +298,6 @@
                 return;
             }
 
-            // Cálculos para Paginación
             const totalPages = Math.ceil(filteredData.length / pageSize);
             if(currentPage > totalPages) currentPage = totalPages;
 
@@ -301,7 +307,6 @@
 
             document.getElementById('pagination-info').innerText = `Mostrando ${startIndex + 1} a ${endIndex} de ${filteredData.length} registros`;
 
-            // Renderizar Filas HTML
             let rowsHtml = '';
             dataToRender.forEach(row => {
                 rowsHtml += `<tr><td class="ps-4 fw-bold text-secondary">#${row.id}</td>`;
@@ -309,11 +314,10 @@
                     let valor = row[col.field];
 
                     if(col.type === 'fk' && valor) {
-                        if (!isNaN(valor)) {
-                            valor = `<span class="badge bg-light text-dark border px-2 py-1">${getFkText(col.fkSource, valor)}</span>`;
-                        } else {
-                            valor = `<span class="badge bg-light text-dark border px-2 py-1">${valor}</span>`;
-                        }
+                        let campoNombre = col.field.replace('_id', '_nombre');
+                        let textoMostrar = row[campoNombre] ? row[campoNombre] : getFkText(col.fkSource, valor);
+
+                        valor = `<span class="badge bg-light text-dark border px-2 py-1">${textoMostrar}</span>`;
                     } else if(col.type === 'select') {
                         valor = valor == 1 ? '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">Activo</span>' : '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1">Inactivo</span>';
                     }
@@ -334,9 +338,7 @@
             const ul = document.getElementById('pagination-controls');
             let paginationHtml = '';
 
-            paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <button class="page-link" onclick="cambiarPagina(${currentPage - 1})"><i class="bi bi-chevron-left"></i></button>
-            </li>`;
+            paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button class="page-link" onclick="cambiarPagina(${currentPage - 1})"><i class="bi bi-chevron-left"></i></button></li>`;
 
             let startPage = Math.max(1, currentPage - 2);
             let endPage = Math.min(totalPages, currentPage + 2);
@@ -344,23 +346,15 @@
             if (startPage > 1) paginationHtml += `<li class="page-item"><button class="page-link" onclick="cambiarPagina(1)">1</button></li><li class="page-item disabled"><span class="page-link border-0 text-muted">...</span></li>`;
 
             for (let i = startPage; i <= endPage; i++) {
-                paginationHtml += `<li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <button class="page-link" onclick="cambiarPagina(${i})">${i}</button>
-                </li>`;
+                paginationHtml += `<li class="page-item ${i === currentPage ? 'active' : ''}"><button class="page-link" onclick="cambiarPagina(${i})">${i}</button></li>`;
             }
 
             if (endPage < totalPages) paginationHtml += `<li class="page-item disabled"><span class="page-link border-0 text-muted">...</span></li><li class="page-item"><button class="page-link" onclick="cambiarPagina(${totalPages})">${totalPages}</button></li>`;
 
-            paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                <button class="page-link" onclick="cambiarPagina(${currentPage + 1})"><i class="bi bi-chevron-right"></i></button>
-            </li>`;
+            paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><button class="page-link" onclick="cambiarPagina(${currentPage + 1})"><i class="bi bi-chevron-right"></i></button></li>`;
 
             ul.innerHTML = paginationHtml;
         }
-
-        // ==========================================
-        // FUNCIONES DEL MODAL (CRUD)
-        // ==========================================
 
         function construirFormulario() {
             const formInputs = document.getElementById('form-inputs');
@@ -374,8 +368,9 @@
                     col.options.forEach(opt => html += `<option value="${opt.val}">${opt.text}</option>`);
                     html += `</select>`;
                 } else if (col.type === 'fk') {
+                    let catalogoOpciones = fkData[col.fkSource] || [];
                     html += `<select class="form-select bg-light border-primary" name="${col.field}" required><option value="">-- Seleccione --</option>`;
-                    (fkData[col.fkSource] || []).forEach(opt => html += `<option value="${opt.id}">${opt.text}</option>`);
+                    catalogoOpciones.forEach(opt => html += `<option value="${opt.id}">${opt.text}</option>`);
                     html += `</select>`;
                 }
                 html += `</div>`;
@@ -405,7 +400,7 @@
                 const response = await fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value, 'Accept': 'application/json' }, body: formData });
                 if (response.ok) {
                     crudModalInstance.hide();
-                    cargarTabla(activeTableGlobal); // Recarga para aplicar la nueva paginación si es necesario
+                    cargarTabla(activeTableGlobal);
                 } else alert('Error en los datos.');
             } catch (error) { alert('Error crítico.'); } finally { document.getElementById('btnGuardar').disabled = false; document.getElementById('btnGuardarTexto').textContent = 'Guardar'; }
         }

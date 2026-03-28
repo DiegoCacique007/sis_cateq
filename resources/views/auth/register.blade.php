@@ -141,6 +141,27 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
+            position: relative; /* Añadido para el botón volver */
+        }
+
+        /* Botón de regreso */
+        .btn-back {
+            position: absolute;
+            top: 25px;
+            left: clamp(25px, 3vw, 40px);
+            color: var(--text-soft);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s ease;
+            z-index: 10;
+        }
+
+        .btn-back:hover {
+            color: var(--blue-main);
         }
 
         .form-title{
@@ -148,6 +169,7 @@
             font-size: 1.4rem;
             color: var(--blue-main);
             margin-bottom: 5px;
+            margin-top: 20px; /* Espacio para que no choque con el botón de regreso */
         }
 
         .form-subtitle{
@@ -271,6 +293,9 @@
             .brand-panel{ padding: 30px 20px; flex: none; }
             .system-name { font-size: 1.3rem; }
             .logo-container { width: 50px; height: 50px; font-size: 1.5rem; margin-bottom: 15px; }
+            .form-panel { padding: 40px 20px 30px; }
+            .btn-back { top: 15px; left: 20px; }
+            .form-title { margin-top: 15px; }
         }
     </style>
 </head>
@@ -288,6 +313,11 @@
         </div>
 
         <div class="form-panel">
+
+            {{-- BOTÓN DE REGRESO A INICIO --}}
+            <a href="{{ url('/') }}" class="btn-back anim-item delay-1">
+                <i class="bi bi-arrow-left"></i> Volver al inicio
+            </a>
 
             <div class="anim-item delay-1">
                 <h2 class="form-title">Crear Cuenta</h2>
