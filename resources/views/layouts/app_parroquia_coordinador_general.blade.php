@@ -149,44 +149,37 @@
             </div>
             <div>
                 <p class="brand-title mb-0">Parroquia</p>
-                <p class="brand-sub mb-0">@yield('subtitle', 'Panel de la secretaria')</p>
+                <p class="brand-sub mb-0">@yield('subtitle', 'Panel del Coordinador General')</p>
             </div>
         </div>
 
         <nav class="nav flex-column nav-parroquia" id="menu-tablas">
 
-            @if(auth()->check() && auth()->user()->role === 'secretaria')
+            @if(auth()->check() && auth()->user()->role === 'coord_general')
 
-                <a class="nav-link {{ request()->routeIs('secretaria.dashboard') ? 'active' : '' }}" href="{{ route('secretaria.dashboard') }}">
+                <a class="nav-link {{ request()->routeIs('coord_general.dashboard') ? 'active' : '' }}" href="{{ route('coord_general.dashboard') }}">
                     <i class="bi bi-house me-2"></i> <span>Inicio</span>
                 </a>
-                <a class="nav-link {{ request()->routeIs('secretaria.usuarios.pendientes') ? 'active' : '' }}" href="{{ route('secretaria.usuarios.pendientes') }}">
-                    <i class="bi bi-person-lines-fill me-2"></i> <span>Usuarios pendientes</span>
+
+                <div class="menu-label mt-3">Configuración Global</div>
+
+                <a class="nav-link" href="{{ route('coord_general.dashboard') }}#niveles" onclick="if(typeof switchSection==='function') switchSection('niveles', this)">
+                    <i class="bi bi-layers me-2"></i> <span>Niveles</span>
+                </a>
+                <a class="nav-link" href="{{ route('coord_general.dashboard') }}#periodos" onclick="if(typeof switchSection==='function') switchSection('periodos', this)">
+                    <i class="bi bi-calendar-range me-2"></i> <span>Periodos</span>
+                </a>
+                <a class="nav-link" href="{{ route('coord_general.dashboard') }}#rubros" onclick="if(typeof switchSection==='function') switchSection('rubros', this)">
+                    <i class="bi bi-percent me-2"></i> <span>Rubros</span>
+                </a>
+                <a class="nav-link" href="{{ route('coord_general.dashboard') }}#unidades" onclick="if(typeof switchSection==='function') switchSection('unidades', this)">
+                    <i class="bi bi-book me-2"></i> <span>Unidades</span>
+                </a>
+                <a class="nav-link" href="{{ route('coord_general.dashboard') }}#grupos" onclick="if(typeof switchSection==='function') switchSection('grupos', this)">
+                    <i class="bi bi-grid me-2"></i> <span>Grupos</span>
                 </a>
 
-                <div class="menu-label mt-3">Gestión Escolar</div>
 
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#alumnos" onclick="if(typeof switchSection==='function') switchSection('alumnos', this)">
-                    <i class="bi bi-people me-2"></i> <span>Alumnos</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#tutores" onclick="if(typeof switchSection==='function') switchSection('tutores', this)">
-                    <i class="bi bi-person-badge me-2"></i> <span>Tutores</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#inscripciones" onclick="if(typeof switchSection==='function') switchSection('inscripciones', this)">
-                    <i class="bi bi-card-checklist me-2"></i> <span>Inscripciones</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#asigna_grupo" onclick="if(typeof switchSection==='function') switchSection('asigna_grupo', this)">
-                    <i class="bi bi-diagram-3 me-2"></i> <span>Asignar grupos</span>
-                </a>
-
-                <div class="menu-label mt-3">Documentación</div>
-
-                <a class="nav-link text-muted" href="#" onclick="alert('Módulo en desarrollo. Disponible próximamente.'); return false;">
-                    <i class="bi bi-patch-check me-2"></i> <span>Generar Certificados</span> <i class="bi bi-lock-fill ms-auto small"></i>
-                </a>
-                <a class="nav-link text-muted" href="#" onclick="alert('Módulo en desarrollo. Disponible próximamente.'); return false;">
-                    <i class="bi bi-file-earmark-text me-2"></i> <span>Generar Boletas</span> <i class="bi bi-lock-fill ms-auto small"></i>
-                </a>
 
             @else
                 <a class="nav-link" href="{{ url('/dashboard') }}">

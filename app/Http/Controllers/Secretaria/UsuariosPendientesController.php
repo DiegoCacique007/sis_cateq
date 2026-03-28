@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Secretaria;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -29,7 +29,7 @@ class UsuariosPendientesController extends Controller
 ]);
 
 $user->update([
-  'role' => $data['role'],         
+  'role' => $data['role'],
   'status' => 'aprobado',
   'approved_at' => now(),
   'approved_by' => auth()->id(),
@@ -51,5 +51,5 @@ public function bloquear(Request $request, \App\Models\User $user)
 
     return back()->with('status', 'Usuario bloqueado correctamente.');
 }
-    
+
 }

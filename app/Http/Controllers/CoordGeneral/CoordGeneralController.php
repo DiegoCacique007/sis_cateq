@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\CoordGeneral;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 
 class CoordGeneralController extends Controller
 {
@@ -11,3 +11,4 @@ class CoordGeneralController extends Controller
         return view('coord_general.dashboard');
     }
 }
+

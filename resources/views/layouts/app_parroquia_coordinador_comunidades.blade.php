@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'SIS_CATEQ')</title>
+    <title>@yield('title', 'SIS_CATEQ - Comunidades')</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -117,21 +117,10 @@
         }
         .btn-outline-parroquia:hover{ border-color:var(--blue-main); background:var(--blue-main); color:#ffffff; }
 
-        .card-parroquia{
-            background:var(--panel); backdrop-filter:blur(12px); border:1px solid var(--border);
-            border-left:4px solid var(--blue-main); border-radius:16px;
-            box-shadow:0 15px 35px rgba(30, 58, 138, 0.07); overflow:hidden;
-        }
-
-        .alert-success{
-            background:rgba(79, 172, 254, 0.1); border:1px solid rgba(79, 172, 254, 0.25);
-            color:var(--blue-dark); border-radius:10px;
-        }
-
         @media (max-width: 992px){
             .sidebar{ width:92px; padding:18px 10px; }
             .brand-sub, .brand-title, .nav-parroquia .nav-link span, .menu-label{ display:none; }
-            .main{ padding:18px 14px; }
+            .main{ padding:18px 14px; margin-left: 92px !important; }
         }
     </style>
 </head>
@@ -139,7 +128,7 @@
 
 <div class="app-shell">
 
-    <aside class="sidebar">
+    <aside class="sidebar d-flex flex-column h-100 position-fixed" style="z-index: 1000;">
         <div class="brand">
             <div class="logo" aria-hidden="true">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -149,43 +138,22 @@
             </div>
             <div>
                 <p class="brand-title mb-0">Parroquia</p>
-                <p class="brand-sub mb-0">@yield('subtitle', 'Panel de la secretaria')</p>
+                <p class="brand-sub mb-0">@yield('subtitle', 'Panel de Coordinación')</p>
             </div>
         </div>
 
-        <nav class="nav flex-column nav-parroquia" id="menu-tablas">
+        <nav class="nav flex-column nav-parroquia flex-grow-1" id="menu-tablas">
 
-            @if(auth()->check() && auth()->user()->role === 'secretaria')
+            @if(auth()->check() && auth()->user()->role === 'coord_comunidad')
 
-                <a class="nav-link {{ request()->routeIs('secretaria.dashboard') ? 'active' : '' }}" href="{{ route('secretaria.dashboard') }}">
+                <a class="nav-link menu-item active" href="#" onclick="switchSection('')">
                     <i class="bi bi-house me-2"></i> <span>Inicio</span>
                 </a>
-                <a class="nav-link {{ request()->routeIs('secretaria.usuarios.pendientes') ? 'active' : '' }}" href="{{ route('secretaria.usuarios.pendientes') }}">
-                    <i class="bi bi-person-lines-fill me-2"></i> <span>Usuarios pendientes</span>
-                </a>
 
-                <div class="menu-label mt-3">Gestión Escolar</div>
+                <div class="menu-label mt-3">Gestión de Zonas</div>
 
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#alumnos" onclick="if(typeof switchSection==='function') switchSection('alumnos', this)">
-                    <i class="bi bi-people me-2"></i> <span>Alumnos</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#tutores" onclick="if(typeof switchSection==='function') switchSection('tutores', this)">
-                    <i class="bi bi-person-badge me-2"></i> <span>Tutores</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#inscripciones" onclick="if(typeof switchSection==='function') switchSection('inscripciones', this)">
-                    <i class="bi bi-card-checklist me-2"></i> <span>Inscripciones</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#asigna_grupo" onclick="if(typeof switchSection==='function') switchSection('asigna_grupo', this)">
-                    <i class="bi bi-diagram-3 me-2"></i> <span>Asignar grupos</span>
-                </a>
-
-                <div class="menu-label mt-3">Documentación</div>
-
-                <a class="nav-link text-muted" href="#" onclick="alert('Módulo en desarrollo. Disponible próximamente.'); return false;">
-                    <i class="bi bi-patch-check me-2"></i> <span>Generar Certificados</span> <i class="bi bi-lock-fill ms-auto small"></i>
-                </a>
-                <a class="nav-link text-muted" href="#" onclick="alert('Módulo en desarrollo. Disponible próximamente.'); return false;">
-                    <i class="bi bi-file-earmark-text me-2"></i> <span>Generar Boletas</span> <i class="bi bi-lock-fill ms-auto small"></i>
+                <a class="nav-link menu-item" href="#comunidades" onclick="switchSection('comunidades')">
+                    <i class="bi bi-geo-alt me-2"></i> <span>Comunidades</span>
                 </a>
 
             @else
@@ -196,7 +164,7 @@
 
         </nav>
 
-        <div class="mt-3 pt-3" style="border-top:1px solid rgba(30, 58, 138, 0.08);">
+        <div class="mt-auto pt-3 pb-2" style="border-top:1px solid rgba(30, 58, 138, 0.08);">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button class="btn btn-outline-parroquia btn-sm w-100" type="submit">Salir</button>
@@ -204,7 +172,7 @@
         </div>
     </aside>
 
-    <main class="main">
+    <main class="main" style="margin-left: 290px; min-height: 100vh;">
         <div class="topbar">
             <div>
                 <h1 class="topbar-title">@yield('header_title', 'Dashboard')</h1>
@@ -226,6 +194,32 @@
         @yield('content')
     </main>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const menuItems = document.querySelectorAll('.menu-item');
+
+        // Función para cambiar la clase activa cuando le das click al menú lateral
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // Quitarle el azul a todos
+                menuItems.forEach(link => link.classList.remove('active'));
+                // Ponerle el azul solo al que diste click
+                this.classList.add('active');
+            });
+        });
+
+        // Este pedacito sirve por si recargas la página estando en #comunidades
+        let hash = window.location.hash;
+        if (hash) {
+            let activeElement = document.querySelector(`.menu-item[href="${hash}"]`);
+            if(activeElement) {
+                menuItems.forEach(link => link.classList.remove('active'));
+                activeElement.classList.add('active');
+            }
+        }
+    });
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

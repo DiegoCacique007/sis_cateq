@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'SIS_CATEQ')</title>
+    <title>@yield('title', 'SIS_CATEQ - Catequista')</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -142,50 +142,33 @@
     <aside class="sidebar">
         <div class="brand">
             <div class="logo" aria-hidden="true">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+                <i class="bi bi-book-half fs-5"></i>
             </div>
             <div>
                 <p class="brand-title mb-0">Parroquia</p>
-                <p class="brand-sub mb-0">@yield('subtitle', 'Panel de la secretaria')</p>
+                <p class="brand-sub mb-0">@yield('subtitle', 'Panel de Catequista')</p>
             </div>
         </div>
 
         <nav class="nav flex-column nav-parroquia" id="menu-tablas">
 
-            @if(auth()->check() && auth()->user()->role === 'secretaria')
+            @if(auth()->check() && auth()->user()->role === 'catequista')
 
-                <a class="nav-link {{ request()->routeIs('secretaria.dashboard') ? 'active' : '' }}" href="{{ route('secretaria.dashboard') }}">
+                <a class="nav-link {{ request()->routeIs('catequista.dashboard') && !request()->hash ? 'active' : '' }}" href="{{ route('catequista.dashboard') }}" onclick="if(typeof switchSection==='function') switchSection('', this)">
                     <i class="bi bi-house me-2"></i> <span>Inicio</span>
                 </a>
-                <a class="nav-link {{ request()->routeIs('secretaria.usuarios.pendientes') ? 'active' : '' }}" href="{{ route('secretaria.usuarios.pendientes') }}">
-                    <i class="bi bi-person-lines-fill me-2"></i> <span>Usuarios pendientes</span>
+
+                <div class="menu-label mt-3">Mi Clase</div>
+
+                <a class="nav-link" href="{{ route('catequista.dashboard') }}#mi_grupo" onclick="if(typeof switchSection==='function') switchSection('mi_grupo', this)">
+                    <i class="bi bi-people me-2 text-primary"></i> <span>Lista de Grupo</span>
+                </a>
+                <a class="nav-link" href="{{ route('catequista.dashboard') }}#evaluaciones" onclick="if(typeof switchSection==='function') switchSection('evaluaciones', this)">
+                    <i class="bi bi-clipboard-check me-2 text-success"></i> <span>Evaluaciones</span>
                 </a>
 
-                <div class="menu-label mt-3">Gestión Escolar</div>
-
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#alumnos" onclick="if(typeof switchSection==='function') switchSection('alumnos', this)">
-                    <i class="bi bi-people me-2"></i> <span>Alumnos</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#tutores" onclick="if(typeof switchSection==='function') switchSection('tutores', this)">
-                    <i class="bi bi-person-badge me-2"></i> <span>Tutores</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#inscripciones" onclick="if(typeof switchSection==='function') switchSection('inscripciones', this)">
-                    <i class="bi bi-card-checklist me-2"></i> <span>Inscripciones</span>
-                </a>
-                <a class="nav-link" href="{{ route('secretaria.dashboard') }}#asigna_grupo" onclick="if(typeof switchSection==='function') switchSection('asigna_grupo', this)">
-                    <i class="bi bi-diagram-3 me-2"></i> <span>Asignar grupos</span>
-                </a>
-
-                <div class="menu-label mt-3">Documentación</div>
-
-                <a class="nav-link text-muted" href="#" onclick="alert('Módulo en desarrollo. Disponible próximamente.'); return false;">
-                    <i class="bi bi-patch-check me-2"></i> <span>Generar Certificados</span> <i class="bi bi-lock-fill ms-auto small"></i>
-                </a>
-                <a class="nav-link text-muted" href="#" onclick="alert('Módulo en desarrollo. Disponible próximamente.'); return false;">
-                    <i class="bi bi-file-earmark-text me-2"></i> <span>Generar Boletas</span> <i class="bi bi-lock-fill ms-auto small"></i>
+                <a class="nav-link text-muted" href="#" onclick="alert('Módulo de Asistencias en desarrollo. Disponible próximamente.'); return false;" style="cursor: not-allowed;">
+                    <i class="bi bi-calendar2-check me-2"></i> <span>Asistencias</span> <i class="bi bi-lock-fill ms-auto small"></i>
                 </a>
 
             @else
@@ -207,20 +190,23 @@
     <main class="main">
         <div class="topbar">
             <div>
-                <h1 class="topbar-title">@yield('header_title', 'Dashboard')</h1>
+                <h1 class="topbar-title fw-bold" style="font-family: 'Cinzel', serif;">@yield('header_title', 'Dashboard')</h1>
                 <p class="topbar-sub">@yield('header_subtitle', '')</p>
             </div>
 
             @auth
                 <div class="d-flex gap-2 align-items-center flex-wrap">
-                    <span class="chip"><i class="bi bi-person-circle me-1"></i> {{ auth()->user()->name }} ({{ auth()->user()->role }})</span>
+                    <span class="chip shadow-sm"><i class="bi bi-person-circle me-1"></i> {{ auth()->user()->name }} (Catequista)</span>
                     @yield('header_actions')
                 </div>
             @endauth
         </div>
 
         @if(session('status'))
-            <div class="alert alert-success py-2"><i class="bi bi-check-circle-fill me-2"></i> {{ session('status') }}</div>
+            <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> {{ session('status') }}
+                <button type="button" class="btn-close py-2" data-bs-dismiss="dismiss" aria-label="Close"></button>
+            </div>
         @endif
 
         @yield('content')
