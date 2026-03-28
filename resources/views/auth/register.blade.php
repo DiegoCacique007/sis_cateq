@@ -352,7 +352,7 @@
                         <option value="coord_general" {{ old('requested_role')=='coord_general' ? 'selected' : '' }}>Coordinador General</option>
                         <option value="parroco" {{ old('requested_role')=='parroco' ? 'selected' : '' }}>Párroco</option>
                         <option value="coord_comunidad" {{ old('requested_role')=='coord_comunidad' ? 'selected' : '' }}>Coordinador de Comunidad</option>
-                        <option value="secretaria" {{ old('requested_role')=='secretaria' ? 'selected' : '' }}>Secretaría</option>
+
                     </select>
                 </div>
 
