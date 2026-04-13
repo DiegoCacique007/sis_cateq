@@ -25,6 +25,13 @@
         .page-link { color: var(--blue-dark); border: none; border-radius: 8px; margin: 0 2px; font-weight: 600; }
         .page-item.active .page-link { background-color: var(--blue-main); color: white; box-shadow: 0 4px 8px rgba(79, 172, 254, 0.3); }
         .page-link:focus { box-shadow: none; }
+
+        /* Esconder id*/
+        #tabla-dinamica thead th:first-child,
+        #tabla-dinamica tbody td:first-child {
+            display: none;
+        }
+
     </style>
 
     <div id="sec-inicio" class="crud-section" style="display: block;">
