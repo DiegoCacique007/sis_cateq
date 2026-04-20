@@ -21,9 +21,7 @@ class RegisteredUserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-
-
-        // 1) Normalizar lo que venga del form (por si viene texto o distintos formatos)
+        // 1) Normalizar lo que venga del form
         $raw = (string) $request->input('requested_role', '');
         $key = mb_strtolower(trim($raw));
 
@@ -34,28 +32,32 @@ class RegisteredUserController extends Controller
             'coord_general' => 'coord_general',
             'parroco' => 'parroco',
             'coord_comunidad' => 'coord_comunidad',
+            'secretaria' => 'secretaria',
 
-            // variaciones comunes (texto visible)
+            // variaciones comunes
             'coordinador general' => 'coord_general',
             'coordinador comunidad' => 'coord_comunidad',
             'coordinador de comunidad' => 'coord_comunidad',
             'párroco' => 'parroco',
             'parroco' => 'parroco',
+            'secretaría' => 'secretaria',
 
             // abreviaciones posibles
             'coord. general' => 'coord_general',
             'coord general' => 'coord_general',
             'coord. comunidad' => 'coord_comunidad',
             'coord comunidad' => 'coord_comunidad',
+            'secre' => 'secretaria',
         ];
 
         $normalizedRequestedRole = $map[$key] ?? null;
 
-        // 2) Validación (ya con valor normalizado)
+        // 2) Validación
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'requested_role' => ['required', 'string'],
         ]);
 
         // Si no se pudo normalizar, regresamos error claro
@@ -65,7 +67,7 @@ class RegisteredUserController extends Controller
                 ->withInput();
         }
 
-        // 3) Debug para confirmar qué llega y qué se normaliza
+        // 3) Debug
         Log::info('REGISTER requested_role', [
             'email' => $validated['email'],
             'raw_requested_role' => $raw,
@@ -78,14 +80,8 @@ class RegisteredUserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-
-            // rol real base (no dar privilegios desde registro)
             'role' => 'usuario',
-
-            // ahora sí se guarda lo elegido (ya normalizado)
             'requested_role' => $normalizedRequestedRole,
-
-            // estado
             'status' => 'pendiente',
         ]);
 

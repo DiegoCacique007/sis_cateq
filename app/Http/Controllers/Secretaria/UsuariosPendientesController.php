@@ -25,7 +25,7 @@ class UsuariosPendientesController extends Controller
 
         // si usas el select para rol en la vista, descomenta estas líneas:
        $data = $request->validate([
-  'role' => ['required', 'in:catequista,coord_comunidad,coord_general,parroco'],
+  'role' => ['required', 'in:catequista,coord_comunidad,coord_general,parroco,secretaria'],
 ]);
 
 $user->update([

@@ -8,9 +8,9 @@
 @section('content')
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
-    <span class="badge bg-primary rounded-pill px-3 py-2 shadow-sm" style="font-size: 0.9rem;">
-      <i class="bi bi-person-lines-fill me-1"></i> {{ $pendientes->count() }} Solicitudes Pendientes
-    </span>
+            <span class="badge bg-primary rounded-pill px-3 py-2 shadow-sm" style="font-size: 0.9rem;">
+                <i class="bi bi-person-lines-fill me-1"></i> {{ $pendientes->count() }} Solicitudes Pendientes
+            </span>
         </div>
 
         <div class="d-flex gap-2">
@@ -31,7 +31,9 @@
             <h5 class="mb-0 fw-bold" style="color: var(--blue-dark, #1e3a8a);">Lista de solicitudes</h5>
 
             <div class="input-group input-group-sm shadow-sm" style="max-width: 350px;">
-                <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-search"></i></span>
+                <span class="input-group-text bg-white text-muted border-end-0">
+                    <i class="bi bi-search"></i>
+                </span>
                 <input id="searchInput" type="text" class="form-control border-start-0 ps-0" placeholder="Nombre o correo...">
             </div>
         </div>
@@ -52,7 +54,7 @@
                             <th style="width: 150px;">Solicita</th>
                             <th style="width: 140px;">Rol actual</th>
                             <th style="width: 170px;">Registro</th>
-                            <th class="text-end pe-4" style="width: 360px;">Acciones</th>
+                            <th class="text-end pe-4" style="min-width: 260px;">Acciones</th>
                         </tr>
                         </thead>
 
@@ -63,15 +65,15 @@
                                 <td class="text-muted">{{ $u->email }}</td>
 
                                 <td>
-                  <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1">
-                    {{ strtoupper($u->requested_role ?? 'catequista') }}
-                  </span>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1">
+                                            {{ strtoupper($u->requested_role ?? 'catequista') }}
+                                        </span>
                                 </td>
 
                                 <td>
-                  <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">
-                    {{ strtoupper($u->role) }}
-                  </span>
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">
+                                            {{ strtoupper($u->role) }}
+                                        </span>
                                 </td>
 
                                 <td class="text-muted small">
@@ -79,28 +81,21 @@
                                 </td>
 
                                 <td class="text-end pe-4">
-                                    <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                    <div class="d-inline-flex align-items-center gap-2" style="white-space: nowrap;">
 
-                                        <form method="POST" action="{{ route('secretaria.usuarios.aprobar', $u->id) }}" class="d-flex gap-2">
+                                        <form method="POST" action="{{ route('secretaria.usuarios.aprobar', $u->id) }}" class="m-0">
                                             @csrf
+                                            <input type="hidden" name="role" value="{{ $u->requested_role ?? 'catequista' }}">
 
-                                            <select name="role" class="form-select form-select-sm border-success text-success fw-semibold" style="max-width: 190px;" required>
-                                                <option value="catequista" {{ ($u->requested_role ?? 'catequista')=='catequista' ? 'selected' : '' }}>Catequista</option>
-                                                <option value="coord_comunidad" {{ ($u->requested_role ?? '')=='coord_comunidad' ? 'selected' : '' }}>Coord. Comunidad</option>
-                                                <option value="coord_general" {{ ($u->requested_role ?? '')=='coord_general' ? 'selected' : '' }}>Coord. General</option>
-                                                <option value="parroco" {{ ($u->requested_role ?? '')=='parroco' ? 'selected' : '' }}>Párroco</option>
-                                                <option value="secretaria" {{ ($u->requested_role ?? '')=='secretaria' ? 'selected' : '' }}>Secretaria</option>
-                                            </select>
-
-                                            <button class="btn btn-sm btn-success shadow-sm fw-bold px-3"
-                                                    onclick="return confirm('¿Aprobar a {{ $u->name }} con el rol seleccionado?');">
+                                            <button type="submit" class="btn btn-sm btn-success shadow-sm fw-bold px-3"
+                                                    onclick="return confirm('¿Aprobar a {{ $u->name }} con el rol solicitado?');">
                                                 <i class="bi bi-check-lg me-1"></i> Aprobar
                                             </button>
                                         </form>
 
-                                        <form method="POST" action="{{ route('secretaria.usuarios.bloquear', $u->id) }}">
+                                        <form method="POST" action="{{ route('secretaria.usuarios.bloquear', $u->id) }}" class="m-0">
                                             @csrf
-                                            <button class="btn btn-outline-danger btn-sm fw-bold px-3"
+                                            <button type="submit" class="btn btn-outline-danger btn-sm fw-bold px-3"
                                                     onclick="return confirm('¿Bloquear a {{ $u->name }}? Esta acción impedirá su acceso.');">
                                                 <i class="bi bi-slash-circle me-1"></i> Bloquear
                                             </button>
@@ -116,7 +111,8 @@
 
                 <div class="card-footer bg-white border-0 p-3">
                     <p class="text-muted small mb-0">
-                        <i class="bi bi-lightbulb text-warning me-1"></i> <strong>Tip:</strong> revisa la solicitud antes de aprobar. Si no reconoces el correo/nombre, puedes bloquear la cuenta.
+                        <i class="bi bi-lightbulb text-warning me-1"></i>
+                        <strong>Tip:</strong> revisa la solicitud antes de aprobar. Si no reconoces el correo/nombre, puedes bloquear la cuenta.
                     </p>
                 </div>
             @endif
@@ -124,7 +120,6 @@
     </div>
 
     <script>
-        // Tu script original de búsqueda, sin modificaciones, funcionando perfecto.
         const input = document.getElementById('searchInput');
         const table = document.getElementById('pendientesTable');
 
@@ -132,6 +127,7 @@
             input.addEventListener('keyup', function () {
                 const q = this.value.toLowerCase();
                 const rows = table.querySelectorAll('tbody tr');
+
                 rows.forEach(r => {
                     const text = r.innerText.toLowerCase();
                     r.style.display = text.includes(q) ? '' : 'none';
