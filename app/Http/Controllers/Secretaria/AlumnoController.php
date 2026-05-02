@@ -25,8 +25,10 @@ class AlumnoController extends Controller
                 'alumnos.*',
                 'comunidades.comunidad as comunidad_nombre'
             )
-            ->whereHas('inscripciones', function ($q) {
-                $q->where('periodo_id', session('periodo_activo_id'));
+            ->where(function ($query) {
+                $query->whereHas('inscripciones', function ($q) {
+                    $q->where('periodo_id', session('periodo_activo_id'));
+                })->orWhereDoesntHave('inscripciones');
             })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {

@@ -16,6 +16,7 @@ class Tutor extends Model
         'nombre',
         'ap',
         'am',
+        'telefono',
         'alumno_id',
     ];
 

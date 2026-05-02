@@ -14,7 +14,7 @@ class EvaluacionController extends Controller
         $catequistaId = auth()->id();
         $unidadId = $request->input('unidad_id');
 
-        $asignacion = DB::table('asigna_grupo')
+        $asignacionesQuery = DB::table('asigna_grupo')
             ->join('comunidades', 'asigna_grupo.comunidad_id', '=', 'comunidades.id')
             ->join('grupos', 'asigna_grupo.grupo_id', '=', 'grupos.id')
             ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
@@ -34,9 +34,19 @@ class EvaluacionController extends Controller
                 'comunidades.comunidad',
                 'grupos.nombre as grupo',
                 'niveles.nivel',
-                DB::raw("CONCAT(periodos.fecha_inicio, ' al ', periodos.fecha_fin) as periodo")
-            )
-            ->first();
+                DB::raw("CONCAT(periodos.fecha_inicio, ' al ', periodos.fecha_fin) as periodo"),
+                DB::raw("CONCAT(niveles.nivel, ' - Grupo ', grupos.nombre, ' (', comunidades.comunidad, ')') as texto_asignacion")
+            );
+
+        $asignaciones = $asignacionesQuery->get();
+        $asignacionId = $request->input('asignacion_id');
+
+        if ($asignacionId) {
+            $asignacion = $asignaciones->firstWhere('asignacion_id', (int) $asignacionId);
+        } else {
+            $asignacion = $asignaciones->first();
+            $asignacionId = $asignacion ? $asignacion->asignacion_id : null;
+        }
 
         $unidades = collect();
         $unidadSeleccionada = null;
@@ -57,17 +67,15 @@ class EvaluacionController extends Controller
                 ->orderBy('numero')
                 ->get();
 
-            $unidadSeleccionada = $unidades->firstWhere('id', (int) $unidadId);
+            if ($unidadId === 'final') {
+                $unidadSeleccionada = (object)[
+                    'id' => 'final',
+                    'text' => 'Resumen Final de Nivel'
+                ];
 
-            $rubros = DB::table('rubros')
-                ->whereNull('deleted_at')
-                ->select('id', 'nombre', 'valor')
-                ->orderBy('nombre')
-                ->get();
+                $rubros = DB::table('rubros')->whereNull('deleted_at')->select('id', 'valor')->get();
+                $totalRubros = (float) $rubros->sum('valor');
 
-            $totalRubros = (float) $rubros->sum('valor');
-
-            if ($unidadSeleccionada) {
                 $alumnosBase = DB::table('inscripciones')
                     ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
                     ->where('inscripciones.grupo_id', $asignacion->grupo_id)
@@ -79,67 +87,131 @@ class EvaluacionController extends Controller
                         'alumnos.id as alumno_id',
                         DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre")
                     )
-                    ->groupBy(
-                        'inscripciones.id',
-                        'alumnos.id',
-                        'alumnos.nombre',
-                        'alumnos.apellido_paterno',
-                        'alumnos.apellido_materno'
-                    )
                     ->orderBy('alumnos.nombre')
                     ->orderBy('alumnos.apellido_paterno')
                     ->get();
 
                 $inscripcionesIds = $alumnosBase->pluck('inscripcion_id')->toArray();
+                $unidadesIds = $unidades->pluck('id')->toArray();
 
                 $evaluaciones = DB::table('evaluaciones')
                     ->whereIn('inscripcion_id', $inscripcionesIds)
-                    ->where('unidad_id', $unidadSeleccionada->id)
+                    ->whereIn('unidad_id', $unidadesIds)
                     ->whereNull('deleted_at')
-                    ->select('id', 'inscripcion_id', 'rubro_id', 'calificacion')
-                    ->get()
-                    ->groupBy('inscripcion_id');
+                    ->select('inscripcion_id', 'unidad_id', 'calificacion')
+                    ->get();
 
-                $alumnos = $alumnosBase->map(function ($alumno) use ($evaluaciones, $rubros, $totalRubros) {
-                    $evaluacionesAlumno = $evaluaciones
-                        ->get($alumno->inscripcion_id, collect())
-                        ->keyBy('rubro_id');
+                $alumnos = $alumnosBase->map(function ($alumno) use ($evaluaciones, $unidades, $totalRubros) {
+                    $evs = $evaluaciones->where('inscripcion_id', $alumno->inscripcion_id);
+                    $promediosUnidad = [];
+                    $sumaPromedios = 0;
+                    $unidadesEvaluadas = 0;
 
-                    $calificaciones = [];
-                    $puntos = 0;
-                    $capturados = 0;
-
-                    foreach ($rubros as $rubro) {
-                        $evaluacion = $evaluacionesAlumno->get($rubro->id);
-                        $calificacion = $evaluacion ? (float) $evaluacion->calificacion : null;
-                        $aporte = null;
-
-                        if ($calificacion !== null) {
-                            $aporte = $calificacion;
-                            $puntos += $aporte;
-                            $capturados++;
+                    foreach ($unidades as $unidad) {
+                        $evsUnidad = $evs->where('unidad_id', $unidad->id);
+                        if ($evsUnidad->count() > 0 && $totalRubros > 0) {
+                            $sumaCalificaciones = $evsUnidad->sum('calificacion');
+                            $promedioUnidad = ($sumaCalificaciones / $totalRubros) * 10;
+                            $promediosUnidad[$unidad->id] = round($promedioUnidad, 2);
+                            $sumaPromedios += $promedioUnidad;
+                            $unidadesEvaluadas++;
+                        } else {
+                            $promediosUnidad[$unidad->id] = null;
                         }
-
-                        $calificaciones[$rubro->id] = [
-                            'calificacion' => $calificacion,
-                            'aporte' => $aporte,
-                        ];
                     }
 
-                    $promedio = $totalRubros > 0 ? ($puntos / $totalRubros) * 10 : 0;
-
-                    $alumno->calificaciones = $calificaciones;
-                    $alumno->puntos = round($puntos, 2);
-                    $alumno->promedio = $capturados > 0 ? round($promedio, 2) : null;
-                    $alumno->capturados = $capturados;
-                    $alumno->total_rubros = $rubros->count();
+                    $alumno->promedios_unidad = $promediosUnidad;
+                    $alumno->promedio_final = $unidadesEvaluadas > 0 ? round($sumaPromedios / $unidadesEvaluadas, 2) : null;
 
                     return $alumno;
                 });
+            } else {
+                $unidadSeleccionada = $unidades->firstWhere('id', (int) $unidadId);
+
+                $rubros = DB::table('rubros')
+                    ->whereNull('deleted_at')
+                    ->select('id', 'nombre', 'valor')
+                    ->orderBy('nombre')
+                    ->get();
+
+                $totalRubros = (float) $rubros->sum('valor');
+
+                if ($unidadSeleccionada) {
+                    $alumnosBase = DB::table('inscripciones')
+                        ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
+                        ->where('inscripciones.grupo_id', $asignacion->grupo_id)
+                        ->where('inscripciones.periodo_id', $asignacion->periodo_id)
+                        ->whereNull('inscripciones.deleted_at')
+                        ->whereNull('alumnos.deleted_at')
+                        ->select(
+                            'inscripciones.id as inscripcion_id',
+                            'alumnos.id as alumno_id',
+                            DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre")
+                        )
+                        ->groupBy(
+                            'inscripciones.id',
+                            'alumnos.id',
+                            'alumnos.nombre',
+                            'alumnos.apellido_paterno',
+                            'alumnos.apellido_materno'
+                        )
+                        ->orderBy('alumnos.nombre')
+                        ->orderBy('alumnos.apellido_paterno')
+                        ->get();
+
+                    $inscripcionesIds = $alumnosBase->pluck('inscripcion_id')->toArray();
+
+                    $evaluaciones = DB::table('evaluaciones')
+                        ->whereIn('inscripcion_id', $inscripcionesIds)
+                        ->where('unidad_id', $unidadSeleccionada->id)
+                        ->whereNull('deleted_at')
+                        ->select('id', 'inscripcion_id', 'rubro_id', 'calificacion')
+                        ->get()
+                        ->groupBy('inscripcion_id');
+
+                    $alumnos = $alumnosBase->map(function ($alumno) use ($evaluaciones, $rubros, $totalRubros) {
+                        $evaluacionesAlumno = $evaluaciones
+                            ->get($alumno->inscripcion_id, collect())
+                            ->keyBy('rubro_id');
+
+                        $calificaciones = [];
+                        $puntos = 0;
+                        $capturados = 0;
+
+                        foreach ($rubros as $rubro) {
+                            $evaluacion = $evaluacionesAlumno->get($rubro->id);
+                            $calificacion = $evaluacion ? (float) $evaluacion->calificacion : null;
+                            $aporte = null;
+
+                            if ($calificacion !== null) {
+                                $aporte = $calificacion;
+                                $puntos += $aporte;
+                                $capturados++;
+                            }
+
+                            $calificaciones[$rubro->id] = [
+                                'calificacion' => $calificacion,
+                                'aporte' => $aporte,
+                            ];
+                        }
+
+                        $promedio = $totalRubros > 0 ? ($puntos / $totalRubros) * 10 : 0;
+
+                        $alumno->calificaciones = $calificaciones;
+                        $alumno->puntos = round($puntos, 2);
+                        $alumno->promedio = $capturados > 0 ? round($promedio, 2) : null;
+                        $alumno->capturados = $capturados;
+                        $alumno->total_rubros = $rubros->count();
+
+                        return $alumno;
+                    });
+                }
             }
         }
 
         return view('catequista.evaluaciones.index', compact(
+            'asignaciones',
+            'asignacionId',
             'asignacion',
             'unidades',
             'unidadId',
@@ -153,10 +225,14 @@ class EvaluacionController extends Controller
     public function guardar(Request $request)
     {
         $validated = $request->validate([
+            'asignacion_id' => ['required', 'integer'],
             'unidad_id' => ['required', 'exists:unidades,id'],
             'calificaciones' => ['required', 'array'],
             'calificaciones.*' => ['array'],
             'calificaciones.*.*' => ['nullable', 'numeric', 'min:0'],
+        ], [
+            'calificaciones.*.*.min' => 'La calificación no puede ser menor a 0. No se permiten valores negativos.',
+            'calificaciones.*.*.numeric' => 'La calificación debe ser un valor numérico.',
         ]);
 
         $rubrosValores = DB::table('rubros')
@@ -172,7 +248,7 @@ class EvaluacionController extends Controller
                         return back()
                             ->withInput()
                             ->withErrors([
-                                'calificaciones' => "Una calificación supera el valor máximo permitido del rubro. Máximo permitido: {$valorMaximo}.",
+                                'calificaciones' => "Una calificación supera el valor máximo permitido del rubro. El valor máximo permitido para ese rubro es de {$valorMaximo}.",
                             ]);
                     }
                 }
@@ -182,6 +258,7 @@ class EvaluacionController extends Controller
         $catequistaId = auth()->id();
 
         $asignacion = DB::table('asigna_grupo')
+            ->where('id', $validated['asignacion_id'])
             ->where('catequista_id', $catequistaId)
             ->where('periodo_id', session('periodo_activo_id'))
             ->whereNull('deleted_at')
@@ -272,6 +349,7 @@ class EvaluacionController extends Controller
 
         return redirect()
             ->route('catequista.evaluaciones.index', [
+                'asignacion_id' => $validated['asignacion_id'],
                 'unidad_id' => $validated['unidad_id'],
             ])
             ->with('success', "Calificaciones guardadas correctamente. Registros actualizados: {$guardadas}.");

@@ -19,7 +19,10 @@ class GrupoController extends Controller
         }
 
         $registros = Grupo::query()
-            ->where('periodo_id', session('periodo_activo_id'))
+            ->where(function($q) {
+                $q->where('periodo_id', session('periodo_activo_id'))
+                  ->orWhereNull('periodo_id');
+            })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where('nombre', 'LIKE', "%{$search}%");
             })

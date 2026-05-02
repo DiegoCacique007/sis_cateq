@@ -1,4 +1,4 @@
-@extends('layouts.app_parroquia_admin')
+@extends('layouts.app_parroquia_catequista')
 
 @section('title', 'Mi Grupo - Catequista')
 @section('header_title', 'Mi Grupo Asignado')
@@ -6,9 +6,24 @@
 @section('content')
     @if($asignacion)
         <div class="card card-parroquia border-0 shadow-sm mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="fw-bold mb-0 module-title">Información del grupo</h5>
-                <small class="text-muted">Grupo asignado actualmente al catequista.</small>
+            <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h5 class="fw-bold mb-0 module-title">Información del grupo</h5>
+                    <small class="text-muted">Grupo asignado actualmente al catequista.</small>
+                </div>
+                
+                @if($asignaciones->count() > 1)
+                    <form method="GET" action="{{ route('catequista.mi_grupo') }}" class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 text-nowrap fw-bold text-primary">Cambiar grupo:</label>
+                        <select name="asignacion_id" class="form-select border-primary" onchange="this.form.submit()">
+                            @foreach($asignaciones as $asig)
+                                <option value="{{ $asig->asignacion_id }}" {{ (int) $asignacionId === (int) $asig->asignacion_id ? 'selected' : '' }}>
+                                    {{ $asig->texto_asignacion }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
             </div>
 
             <div class="card-body">
@@ -44,7 +59,7 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
-                    <a href="{{ route('catequista.mi_grupo.exportar_asistencia') }}" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                    <a href="{{ route('catequista.mi_grupo.exportar_asistencia', ['asignacion_id' => $asignacion->asignacion_id]) }}" class="btn btn-sm btn-outline-success rounded-pill px-3">
                         <i class="bi bi-file-earmark-excel me-1"></i> Descargar Excel de Asistencia
                     </a>
                     <span class="soft-badge">

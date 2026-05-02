@@ -170,20 +170,6 @@
         </div>
 
         <div class="col-md-6 col-xl-4">
-            <a href="{{ route('secretaria.evaluaciones.index') }}" class="quick-link">
-                <div class="card secretaria-card shadow-sm p-2">
-                    <div class="card-body">
-                        <div class="icon-box bg-danger bg-opacity-10 text-danger">
-                            <i class="bi bi-clipboard-check fs-3"></i>
-                        </div>
-                        <h6>Evaluaciones</h6>
-                        <p class="text-muted mb-0">Consulta, registra y actualiza evaluaciones de alumnos.</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-6 col-xl-4">
             <a href="{{ route('secretaria.usuarios.pendientes') }}" class="quick-link">
                 <div class="card secretaria-card shadow-sm p-2">
                     <div class="card-body">
@@ -197,19 +183,6 @@
             </a>
         </div>
 
-        <div class="col-md-6 col-xl-4">
-            <a href="{{ route('secretaria.documentos.index') }}" class="quick-link">
-                <div class="card secretaria-card shadow-sm p-2" style="border-left: 4px solid #f59e0b;">
-                    <div class="card-body">
-                        <div class="icon-box text-white" style="background: linear-gradient(135deg, #f59e0b, #b45309);">
-                            <i class="bi bi-printer fs-3"></i>
-                        </div>
-                        <h6 style="color: #b45309;">Emisión de Documentos</h6>
-                        <p class="text-muted mb-0">Genera boletas, certificados de Primera Comunión y Confirmación.</p>
-                    </div>
-                </div>
-            </a>
-        </div>
     </div>
 
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 mt-4">

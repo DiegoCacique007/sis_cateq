@@ -25,14 +25,17 @@ class TutorController extends Controller
                 'tutores.*',
                 DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre")
             )
-            ->whereHas('alumno.inscripciones', function ($q) {
-                $q->where('periodo_id', session('periodo_activo_id'));
+            ->where(function ($query) {
+                $query->whereHas('alumno.inscripciones', function ($q) {
+                    $q->where('periodo_id', session('periodo_activo_id'));
+                })->orWhereDoesntHave('alumno.inscripciones');
             })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('tutores.nombre', 'LIKE', "%{$search}%")
                         ->orWhere('tutores.ap', 'LIKE', "%{$search}%")
                         ->orWhere('tutores.am', 'LIKE', "%{$search}%")
+                        ->orWhere('tutores.telefono', 'LIKE', "%{$search}%")
                         ->orWhere('alumnos.nombre', 'LIKE', "%{$search}%")
                         ->orWhere('alumnos.apellido_paterno', 'LIKE', "%{$search}%")
                         ->orWhere('alumnos.apellido_materno', 'LIKE', "%{$search}%");
@@ -64,6 +67,7 @@ class TutorController extends Controller
             'nombre' => ['required', 'string', 'max:255'],
             'ap' => ['required', 'string', 'max:255'],
             'am' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
             'alumno_id' => [
                 'required',
                 'exists:alumnos,id',
@@ -85,6 +89,9 @@ class TutorController extends Controller
             'am.string' => 'El apellido materno debe ser texto.',
             'am.max' => 'El apellido materno no puede tener más de 255 caracteres.',
 
+            'telefono.string' => 'El teléfono debe ser texto.',
+            'telefono.max' => 'El teléfono no puede tener más de 20 caracteres.',
+
             'alumno_id.required' => 'Selecciona un alumno.',
             'alumno_id.exists' => 'El alumno seleccionado no existe.',
             'alumno_id.unique' => 'Este tutor ya está registrado para este alumno.',
@@ -105,6 +112,7 @@ class TutorController extends Controller
             'nombre' => ['required', 'string', 'max:255'],
             'ap' => ['required', 'string', 'max:255'],
             'am' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
             'alumno_id' => [
                 'required',
                 'exists:alumnos,id',
@@ -126,6 +134,9 @@ class TutorController extends Controller
 
             'am.string' => 'El apellido materno debe ser texto.',
             'am.max' => 'El apellido materno no puede tener más de 255 caracteres.',
+
+            'telefono.string' => 'El teléfono debe ser texto.',
+            'telefono.max' => 'El teléfono no puede tener más de 20 caracteres.',
 
             'alumno_id.required' => 'Selecciona un alumno.',
             'alumno_id.exists' => 'El alumno seleccionado no existe.',

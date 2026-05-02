@@ -382,9 +382,8 @@
                 @if(auth()->user()->role === 'catequista')
 
                     @php
-                        $menuClaseActivo =
-                            request()->routeIs('catequista.mi_grupo') ||
-                            request()->routeIs('catequista.evaluaciones.*');
+                        $menuClaseActivo = request()->routeIs('catequista.mi_grupo');
+                        $menuEvaluacionesActivo = request()->routeIs('catequista.evaluaciones.*');
                     @endphp
 
                     <a class="nav-link {{ request()->routeIs('catequista.dashboard') ? 'active' : '' }}"
@@ -411,42 +410,26 @@
                                 <i class="bi bi-people text-primary"></i>
                                 <span>Lista de Grupo</span>
                             </a>
-
-                            <a class="nav-link {{ request()->routeIs('catequista.evaluaciones.*') ? 'active' : '' }}"
-                               href="{{ route('catequista.evaluaciones.index') }}">
-                                <i class="bi bi-clipboard-check text-success"></i>
-                                <span>Captura de Calificaciones</span>
-                            </a>
                         </div>
                     </div>
 
-                    <button class="menu-toggle"
+                    <button class="menu-toggle {{ $menuEvaluacionesActivo ? 'active' : '' }}"
                             type="button"
                             data-bs-toggle="collapse"
-                            data-bs-target="#menuPendientesCatequista"
-                            aria-expanded="false"
-                            aria-controls="menuPendientesCatequista">
-                        <i class="bi bi-folder2-open"></i>
-                        <span>Módulos próximos</span>
+                            data-bs-target="#menuEvaluaciones"
+                            aria-expanded="{{ $menuEvaluacionesActivo ? 'true' : 'false' }}"
+                            aria-controls="menuEvaluaciones">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Evaluaciones</span>
                         <i class="bi bi-chevron-down chevron"></i>
                     </button>
 
-                    <div class="collapse" id="menuPendientesCatequista">
+                    <div class="collapse {{ $menuEvaluacionesActivo ? 'show' : '' }}" id="menuEvaluaciones">
                         <div class="submenu">
-                            <a class="nav-link disabled-link"
-                               href="#"
-                               onclick="mostrarModuloEnDesarrollo('Módulo de Asistencias en desarrollo. Disponible próximamente.'); return false;">
-                                <i class="bi bi-calendar2-check"></i>
-                                <span>Asistencias</span>
-                                <i class="bi bi-lock-fill ms-auto small"></i>
-                            </a>
-
-                            <a class="nav-link disabled-link"
-                               href="#"
-                               onclick="mostrarModuloEnDesarrollo('Módulo de Boletas en desarrollo. Disponible próximamente.'); return false;">
-                                <i class="bi bi-journal-text"></i>
-                                <span>Boletas</span>
-                                <i class="bi bi-lock-fill ms-auto small"></i>
+                            <a class="nav-link {{ request()->routeIs('catequista.evaluaciones.*') ? 'active' : '' }}"
+                               href="{{ route('catequista.evaluaciones.index') }}">
+                                <i class="bi bi-calculator text-success"></i>
+                                <span>Captura de Calificaciones</span>
                             </a>
                         </div>
                     </div>
@@ -491,7 +474,14 @@
 
             @auth
                 <div class="d-flex gap-2 align-items-center flex-wrap">
-                    <span class="chip shadow-sm">
+                    @if(in_array(auth()->user()->role, ['secretaria', 'catequista']))
+                        <button type="button" class="btn btn-sm btn-outline-primary chip" data-bs-toggle="modal" data-bs-target="#modalCambiarPeriodo" style="cursor:pointer; border-color: var(--blue-main); color: var(--blue-dark); text-decoration: none;">
+                            <i class="bi bi-calendar-event me-1 text-primary"></i>
+                            Periodo actual: {{ session('periodo_activo_nombre', 'Seleccionar') }}
+                        </button>
+                    @endif
+
+                    <span class="chip">
                         <i class="bi bi-person-circle me-1"></i>
                         {{ auth()->user()->name }} ({{ auth()->user()->role }})
                     </span>
@@ -504,6 +494,48 @@
         @yield('content')
     </main>
 </div>
+
+@auth
+    @if(in_array(auth()->user()->role, ['secretaria', 'catequista']))
+        <div class="modal fade" id="modalCambiarPeriodo" tabindex="-1" aria-labelledby="modalCambiarPeriodoLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form action="{{ route('periodo-activo.cambiar') }}" method="POST">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalCambiarPeriodoLabel">Selecciona Periodo</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            @if(isset($periodos_globales) && $periodos_globales->count() > 0)
+                                <div class="list-group">
+                                    @foreach($periodos_globales as $pg)
+                                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2 {{ session('periodo_activo_id') == $pg->id ? 'active bg-primary bg-opacity-10 text-primary border-primary border-opacity-50' : '' }}" style="cursor: pointer;">
+                                            <input class="form-check-input flex-shrink-0" type="radio" name="periodo_id" value="{{ $pg->id }}" {{ session('periodo_activo_id') == $pg->id ? 'checked' : '' }}>
+                                            <span class="{{ session('periodo_activo_id') == $pg->id ? 'fw-bold' : '' }}">
+                                                {{ $pg->nombre }}
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="alert alert-warning mb-0">
+                                    No hay periodos registrados. Registra un periodo antes de continuar.
+                                </div>
+                            @endif
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            @if(isset($periodos_globales) && $periodos_globales->count() > 0)
+                                <button type="submit" class="btn btn-primary">Cambiar</button>
+                            @endif
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+@endauth
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 

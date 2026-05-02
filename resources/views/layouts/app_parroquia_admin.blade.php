@@ -413,8 +413,7 @@
                             request()->routeIs('secretaria.alumnos.*') ||
                             request()->routeIs('secretaria.tutores.*') ||
                             request()->routeIs('secretaria.inscripciones.*') ||
-                            request()->routeIs('secretaria.asigna_grupo.*') ||
-                            request()->routeIs('secretaria.evaluaciones.*');
+                            request()->routeIs('secretaria.asigna_grupo.*');
 
                         $catalogosActivos =
                             request()->routeIs('secretaria.comunidades.*') ||
@@ -467,10 +466,6 @@
                             <a class="nav-link {{ request()->routeIs('secretaria.asigna_grupo.*') ? 'active' : '' }}" href="{{ route('secretaria.asigna_grupo.index') }}">
                                 <i class="bi bi-diagram-3"></i><span>Asignar grupos</span>
                             </a>
-
-                            <a class="nav-link {{ request()->routeIs('secretaria.evaluaciones.*') ? 'active' : '' }}" href="{{ route('secretaria.evaluaciones.index') }}">
-                                <i class="bi bi-clipboard-check"></i><span>Evaluaciones</span>
-                            </a>
                         </div>
                     </div>
 
@@ -513,61 +508,9 @@
                         </div>
                     </div>
 
-                    {{-- Módulo de Documentos — Solo Admin/Secretaria --}}
-                    <button class="menu-toggle {{ $documentosActivos ? 'active' : '' }}"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#menuDocumentacion"
-                            aria-expanded="{{ $documentosActivos ? 'true' : 'false' }}"
-                            aria-controls="menuDocumentacion">
-                        <i class="bi bi-file-earmark-text"></i>
-                        <span>Documentación</span>
-                        <i class="bi bi-chevron-down chevron"></i>
-                    </button>
 
-                    <div class="collapse {{ $documentosActivos ? 'show' : '' }}" id="menuDocumentacion">
-                        <div class="submenu">
-                            <a class="nav-link {{ request()->routeIs('secretaria.documentos.*') ? 'active' : '' }}" href="{{ route('secretaria.documentos.index') }}">
-                                <i class="bi bi-printer"></i><span>Emitir documentos</span>
-                            </a>
-                        </div>
-                    </div>
 
-                @elseif(auth()->user()->role === 'catequista')
 
-                    @php
-                        $menuCatequistaActivo =
-                            request()->routeIs('catequista.mi_grupo') ||
-                            request()->routeIs('catequista.evaluaciones.*');
-                    @endphp
-
-                    <a class="nav-link {{ request()->routeIs('catequista.dashboard') ? 'active' : '' }}"
-                       href="{{ route('catequista.dashboard') }}">
-                        <i class="bi bi-house"></i><span>Inicio</span>
-                    </a>
-
-                    <button class="menu-toggle {{ $menuCatequistaActivo ? 'active' : '' }}"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#menuCatequista"
-                            aria-expanded="{{ $menuCatequistaActivo ? 'true' : 'false' }}"
-                            aria-controls="menuCatequista">
-                        <i class="bi bi-person-workspace"></i>
-                        <span>Catequista</span>
-                        <i class="bi bi-chevron-down chevron"></i>
-                    </button>
-
-                    <div class="collapse {{ $menuCatequistaActivo ? 'show' : '' }}" id="menuCatequista">
-                        <div class="submenu">
-                            <a class="nav-link {{ request()->routeIs('catequista.mi_grupo') ? 'active' : '' }}" href="{{ route('catequista.mi_grupo') }}">
-                                <i class="bi bi-people"></i><span>Mi grupo</span>
-                            </a>
-
-                            <a class="nav-link {{ request()->routeIs('catequista.evaluaciones.*') ? 'active' : '' }}" href="{{ route('catequista.evaluaciones.index') }}">
-                                <i class="bi bi-clipboard-check"></i><span>Evaluaciones</span>
-                            </a>
-                        </div>
-                    </div>
 
                 @else
 

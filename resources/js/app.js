@@ -1,7 +1,6 @@
 import './bootstrap';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-import './alert';
 
 import Alpine from 'alpinejs';
 import anime from 'animejs';

@@ -44,6 +44,7 @@
                 <thead>
                 <tr>
                     <th>Tutor</th>
+                    <th>Teléfono</th>
                     <th>Alumno asignado</th>
                     <th class="text-end">Acciones</th>
                 </tr>
@@ -57,6 +58,13 @@
                                 {{ $registro->nombre }} {{ $registro->ap }} {{ $registro->am }}
                             </span>
                             <span class="cell-subtitle">Tutor registrado</span>
+                        </td>
+
+                        <td>
+                            <span class="text-muted">
+                                <i class="bi bi-telephone"></i>
+                                {{ $registro->telefono ?? 'Sin teléfono' }}
+                            </span>
                         </td>
 
                         <td>
@@ -125,7 +133,12 @@
                             <input type="text" name="am" value="{{ old('am') }}" class="form-control">
                         </div>
 
-                        <div class="col-md-12">
+                        <div class="col-md-4">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="telefono" value="{{ old('telefono') }}" class="form-control" maxlength="20">
+                        </div>
+
+                        <div class="col-md-8">
                             <label class="form-label">Alumno asignado</label>
                             <select name="alumno_id" class="form-select" required>
                                 <option value="">Selecciona un alumno</option>
@@ -176,7 +189,12 @@
                                 <input type="text" name="am" value="{{ old('am', $registro->am) }}" class="form-control">
                             </div>
 
-                            <div class="col-md-12">
+                            <div class="col-md-4">
+                                <label class="form-label">Teléfono</label>
+                                <input type="text" name="telefono" value="{{ old('telefono', $registro->telefono) }}" class="form-control" maxlength="20">
+                            </div>
+
+                            <div class="col-md-8">
                                 <label class="form-label">Alumno asignado</label>
                                 <select name="alumno_id" class="form-select" required>
                                     <option value="">Selecciona un alumno</option>
