@@ -26,6 +26,7 @@ class User extends Authenticatable
     'status',
     'approved_at',
     'approved_by',
+    'comunidad_id',
 ];
 
     /**
@@ -49,5 +50,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Comunidad asignada (para coord_comunidad).
+     */
+    public function comunidad()
+    {
+        return $this->belongsTo(\App\Models\Secretaria\Comunidad::class, 'comunidad_id');
     }
 }

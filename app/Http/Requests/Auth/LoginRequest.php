@@ -44,9 +44,17 @@ class LoginRequest extends FormRequest
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
+            $user = \App\Models\User::where('email', $this->input('email'))->first();
+
+            if (!$user) {
+                throw ValidationException::withMessages([
+                    'email' => 'El correo electrónico no está registrado en el sistema.',
+                ]);
+            } else {
+                throw ValidationException::withMessages([
+                    'email' => 'La contraseña ingresada es incorrecta.',
+                ]);
+            }
         }
 
         RateLimiter::clear($this->throttleKey());

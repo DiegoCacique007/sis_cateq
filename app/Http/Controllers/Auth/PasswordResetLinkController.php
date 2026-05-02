@@ -27,18 +27,26 @@ class PasswordResetLinkController extends Controller
     {
         $request->validate([
             'email' => ['required', 'email'],
+            'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
+        ], [
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'Ingresa un formato de correo electrónico válido.',
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.confirmed' => 'La confirmación de la contraseña no coincide.',
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        $user = \App\Models\User::where('email', $request->email)->first();
+        
+        if (!$user) {
+            return back()->withInput($request->only('email'))
+                         ->withErrors(['email' => 'No encontramos ningún usuario registrado con ese correo electrónico.']);
+        }
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        // Cambio directo de contraseña sin verificación por correo
+        $user->forceFill([
+            'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+        ])->save();
+
+        return redirect()->route('login')->with('status', '¡Tu contraseña ha sido actualizada exitosamente! Ya puedes iniciar sesión.');
     }
 }

@@ -11,9 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Aquí registramos el alias del middleware de roles
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
+            'periodo.activo' => \App\Http\Middleware\AsegurarPeriodoActivo::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
