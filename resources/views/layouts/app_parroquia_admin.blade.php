@@ -424,6 +424,8 @@
                             request()->routeIs('secretaria.rubros.*');
 
                         $documentosActivos = request()->routeIs('secretaria.documentos.*');
+
+                        $boletasActivas = request()->routeIs('secretaria.boletas.*');
                     @endphp
 
                     <a class="nav-link {{ request()->routeIs('secretaria.dashboard') ? 'active' : '' }}"
@@ -508,9 +510,11 @@
                         </div>
                     </div>
 
-
-
-
+                    <a class="nav-link {{ $boletasActivas ? 'active' : '' }}"
+                       href="{{ route('secretaria.boletas.index') }}">
+                        <i class="bi bi-printer"></i>
+                        <span>Boletas</span>
+                    </a>
 
                 @else
 

@@ -205,6 +205,36 @@
             font-style: italic;
         }
 
+        /* ----- ESTILOS AÑADIDOS PARA EL ÍCONO DE LA CONTRASEÑA ----- */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+            display: block;
+        }
+
+        .password-wrapper .form-control {
+            /* Da espacio para que el texto no se superponga con el ícono */
+            padding-right: 45px; 
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--text-soft);
+            font-size: 1.1rem;
+            transition: color 0.2s;
+            z-index: 10;
+            line-height: 1;
+        }
+
+        .password-toggle:hover {
+            color: var(--blue-main);
+        }
+        /* ----------------------------------------------------------- */
+
         .btn-church{
             background: linear-gradient(135deg, var(--blue-main), var(--blue-dark));
             color: #ffffff;

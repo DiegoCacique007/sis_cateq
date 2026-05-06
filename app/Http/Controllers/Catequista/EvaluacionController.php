@@ -229,31 +229,10 @@ class EvaluacionController extends Controller
             'unidad_id' => ['required', 'exists:unidades,id'],
             'calificaciones' => ['required', 'array'],
             'calificaciones.*' => ['array'],
-            'calificaciones.*.*' => ['nullable', 'numeric', 'min:0'],
+            'calificaciones.*.*' => ['nullable', 'numeric'],
         ], [
-            'calificaciones.*.*.min' => 'La calificación no puede ser menor a 0. No se permiten valores negativos.',
             'calificaciones.*.*.numeric' => 'La calificación debe ser un valor numérico.',
         ]);
-
-        $rubrosValores = DB::table('rubros')
-            ->whereNull('deleted_at')
-            ->pluck('valor', 'id');
-
-        foreach ($validated['calificaciones'] as $rubrosAlumno) {
-            foreach ($rubrosAlumno as $rubroId => $calificacion) {
-                if ($calificacion !== null && $calificacion !== '') {
-                    $valorMaximo = (float) ($rubrosValores[$rubroId] ?? 0);
-
-                    if ((float) $calificacion > $valorMaximo) {
-                        return back()
-                            ->withInput()
-                            ->withErrors([
-                                'calificaciones' => "Una calificación supera el valor máximo permitido del rubro. El valor máximo permitido para ese rubro es de {$valorMaximo}.",
-                            ]);
-                    }
-                }
-            }
-        }
 
         $catequistaId = auth()->id();
 

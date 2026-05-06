@@ -183,6 +183,20 @@
             </a>
         </div>
 
+        <div class="col-md-6 col-xl-4">
+            <a href="{{ route('secretaria.boletas.index') }}" class="quick-link">
+                <div class="card secretaria-card shadow-sm p-2" style="border-left: 4px solid #7c3aed;">
+                    <div class="card-body">
+                        <div class="icon-box text-white" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                            <i class="bi bi-printer fs-3"></i>
+                        </div>
+                        <h6 style="color: #7c3aed;">Boletas</h6>
+                        <p class="text-muted mb-0">Genera boletas de evaluación con calificaciones reales de cada alumno.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
     </div>
 
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 mt-4">

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 // Secretaría
 use App\Http\Controllers\Secretaria\AlumnoController;
 use App\Http\Controllers\Secretaria\AsignaGrupoController;
+use App\Http\Controllers\Secretaria\BoletaController;
 use App\Http\Controllers\Secretaria\ComunidadController;
 use App\Http\Controllers\Secretaria\DocumentoController;
 use App\Http\Controllers\Secretaria\EvaluacionController;
@@ -82,6 +83,12 @@ Route::middleware(['auth', 'role:secretaria', \App\Http\Middleware\NoCacheHeader
         Route::post('/certificado-primera-comunion', [DocumentoController::class, 'certificadoPrimeraComunion'])->name('certificado.primera_comunion');
         Route::post('/certificado-confirmacion', [DocumentoController::class, 'certificadoConfirmacion'])->name('certificado.confirmacion');
         Route::get('/buscar-alumnos', [DocumentoController::class, 'buscarAlumnos'])->name('buscar_alumnos');
+    });
+
+    // ── Módulo de Boletas ──
+    Route::prefix('boletas')->name('boletas.')->group(function () {
+        Route::get('/', [BoletaController::class, 'index'])->name('index');
+        Route::get('/generar/{inscripcion}', [BoletaController::class, 'generar'])->name('generar');
     });
 });
 

@@ -196,7 +196,7 @@
                                     {{ $unidadSeleccionada->text }}
                                 </h5>
                                 <small class="text-muted">
-                                    Captura calificaciones de 0 a 10. El sistema convierte cada rubro según su valor y calcula el resultado final.
+                                    Ingresa lo <strong>obtenido</strong> y el <strong>total posible</strong> para cada rubro. El sistema calcula automáticamente con regla de 3.
                                 </small>
                             </div>
 
@@ -205,14 +205,6 @@
                                 Suma de rubros: {{ number_format($totalRubros, 1) }} / 10.0
                             </span>
                         </div>
-
-                        @if($totalRubros != 10.0)
-                            <div class="alert alert-warning border-0 rounded-0 mb-0">
-                                <i class="bi bi-exclamation-triangle me-1"></i>
-                                Los rubros actualmente suman <strong>{{ number_format($totalRubros, 1) }}</strong>.
-                                El sistema normalizará el resultado para expresarlo en escala de 0 a 10.
-                            </div>
-                        @endif
 
                         @if($errors->any())
                             <div class="alert alert-danger border-0 rounded-0 mb-0">
@@ -240,19 +232,19 @@
                                     <table class="table table-hover align-middle mb-0">
                                         <thead>
                                         <tr>
-                                            <th style="min-width: 260px;">Alumno</th>
+                                            <th style="min-width: 220px;">Alumno</th>
 
                                             @foreach($rubros as $rubro)
-                                                <th class="text-center" style="min-width: 155px;">
+                                                <th class="text-center" style="min-width: 180px;">
                                                     {{ $rubro->nombre }}
                                                     <span class="cell-subtitle">
-                                                            Valor: {{ number_format($rubro->valor, 1) }}
-                                                        </span>
+                                                        Valor máx: {{ number_format($rubro->valor, 1) }}
+                                                    </span>
                                                 </th>
                                             @endforeach
 
-                                            <th class="text-center" style="min-width: 160px;">Resultado</th>
-                                            <th class="text-center" style="min-width: 140px;">Dictamen</th>
+                                            <th class="text-center" style="min-width: 140px;">Resultado</th>
+                                            <th class="text-center" style="min-width: 120px;">Dictamen</th>
                                         </tr>
                                         </thead>
 
@@ -262,60 +254,69 @@
                                                 data-total-rubros="{{ $totalRubros > 0 ? $totalRubros : 10 }}">
                                                 <td>
                                                     <span class="cell-title">{{ $alumno->alumno_nombre }}</span>
-                                                    <span class="cell-subtitle">Alumno de tu grupo asignado</span>
                                                 </td>
 
                                                 @foreach($rubros as $rubro)
                                                     @php
                                                         $dataRubro = $alumno->calificaciones[$rubro->id] ?? null;
                                                         $calificacion = $dataRubro['calificacion'] ?? null;
-                                                        $aporte = $dataRubro['aporte'] ?? null;
                                                     @endphp
 
                                                     <td class="text-center">
-                                                        <input
-                                                            type="number"
+                                                        {{-- Hidden input que envía el valor calculado al backend --}}
+                                                        <input type="hidden"
                                                             name="calificaciones[{{ $alumno->inscripcion_id }}][{{ $rubro->id }}]"
-                                                            value="{{ old('calificaciones.' . $alumno->inscripcion_id . '.' . $rubro->id, $calificacion) }}"
-                                                            class="form-control text-center fw-bold mx-auto js-calificacion-input"
-                                                            style="max-width: 105px;"
-                                                            min="0"
-                                                            max="{{ $rubro->valor }}"
-                                                            step="0.1"
-                                                            placeholder="0-{{ number_format($rubro->valor, 1) }}"
+                                                            class="js-hidden-calificacion"
+                                                            value="{{ $calificacion }}"
                                                             data-valor="{{ $rubro->valor }}"
-                                                            data-aporte-target="aporte-{{ $alumno->inscripcion_id }}-{{ $rubro->id }}"
                                                         >
 
-                                                        <span class="cell-subtitle mt-1">
-                                                                Aporte:
-                                                                <strong id="aporte-{{ $alumno->inscripcion_id }}-{{ $rubro->id }}">
-                                                                    {{ $aporte !== null ? number_format($aporte, 2) : '0.00' }}
-                                                                </strong>
-                                                            </span>
+                                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                                            <input type="number"
+                                                                class="form-control form-control-sm text-center fw-bold js-obtenido"
+                                                                style="width: 58px;"
+                                                                step="any"
+                                                                placeholder="0"
+                                                                data-rubro-valor="{{ $rubro->valor }}"
+                                                                data-inscripcion="{{ $alumno->inscripcion_id }}"
+                                                                data-rubro="{{ $rubro->id }}"
+                                                            >
+                                                            <span class="text-muted fw-bold">/</span>
+                                                            <input type="number"
+                                                                class="form-control form-control-sm text-center fw-bold js-total-posible"
+                                                                style="width: 58px;"
+                                                                step="any"
+                                                                placeholder="0"
+                                                                data-rubro-valor="{{ $rubro->valor }}"
+                                                                data-inscripcion="{{ $alumno->inscripcion_id }}"
+                                                                data-rubro="{{ $rubro->id }}"
+                                                            >
+                                                        </div>
+                                                        <span class="cell-subtitle mt-1 d-block">
+                                                            = <strong class="js-resultado-rubro text-primary" id="res-{{ $alumno->inscripcion_id }}-{{ $rubro->id }}">
+                                                                {{ $calificacion !== null ? number_format($calificacion, 2) : '—' }}
+                                                            </strong>
+                                                            <span class="text-muted">/ {{ number_format($rubro->valor, 1) }}</span>
+                                                        </span>
                                                     </td>
                                                 @endforeach
 
                                                 <td class="text-center">
-                                                        <span class="soft-badge">
-                                                            <i class="bi bi-calculator"></i>
-                                                            <span class="js-promedio">
-                                                                {{ $alumno->promedio !== null ? number_format($alumno->promedio, 2) : '0.00' }}
-                                                            </span>
+                                                    <span class="soft-badge">
+                                                        <i class="bi bi-calculator"></i>
+                                                        <span class="js-promedio">
+                                                            {{ $alumno->promedio !== null ? number_format($alumno->promedio, 2) : '0.00' }}
                                                         </span>
-
-                                                    <span class="cell-subtitle mt-1">
-                                                            Puntos:
-                                                            <span class="js-puntos">
-                                                                {{ number_format($alumno->puntos, 2) }}
-                                                            </span>
-                                                        </span>
+                                                    </span>
+                                                    <span class="cell-subtitle mt-1 d-block">
+                                                        Puntos: <span class="js-puntos">{{ number_format($alumno->puntos, 2) }}</span>
+                                                    </span>
                                                 </td>
 
                                                 <td class="text-center">
-                                                        <span class="badge rounded-pill px-3 py-2 js-estado-row">
-                                                            Pendiente
-                                                        </span>
+                                                    <span class="badge rounded-pill px-3 py-2 js-estado-row">
+                                                        Pendiente
+                                                    </span>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -325,7 +326,8 @@
 
                                 <div class="card-footer bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                                     <small class="text-muted">
-                                        Cada rubro se captura sobre su valor máximo. El resultado final se obtiene sumando los puntos capturados. Aprobado desde 6.0.
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Escribe cuántas obtuvo el alumno y de cuántas posibles. Ej: asistió <strong>4</strong> de <strong>5</strong> sesiones → el sistema calcula automáticamente.
                                     </small>
 
                                     <button class="btn btn-parroquia rounded-pill px-4">
@@ -376,7 +378,6 @@
     <script>
         function actualizarEstado(row, capturados, total, promedio) {
             const estado = row.querySelector('.js-estado-row');
-
             if (!estado) return;
 
             estado.className = 'badge rounded-pill px-3 py-2 js-estado-row';
@@ -384,48 +385,61 @@
             if (capturados === 0) {
                 estado.classList.add('bg-warning', 'bg-opacity-10', 'text-warning', 'border', 'border-warning', 'border-opacity-25');
                 estado.textContent = 'Pendiente';
-                return;
-            }
-
-            if (capturados < total) {
+            } else if (capturados < total) {
                 estado.classList.add('bg-info', 'bg-opacity-10', 'text-info', 'border', 'border-info', 'border-opacity-25');
                 estado.textContent = 'Parcial';
-                return;
-            }
-
-            if (promedio < 6) {
+            } else if (promedio < 6) {
                 estado.classList.add('bg-danger', 'bg-opacity-10', 'text-danger', 'border', 'border-danger', 'border-opacity-25');
                 estado.textContent = 'Reprobado';
-                return;
+            } else {
+                estado.classList.add('bg-success', 'bg-opacity-10', 'text-success', 'border', 'border-success', 'border-opacity-25');
+                estado.textContent = 'Aprobado';
             }
+        }
 
-            estado.classList.add('bg-success', 'bg-opacity-10', 'text-success', 'border', 'border-success', 'border-opacity-25');
-            estado.textContent = 'Aprobado';
+        /**
+         * Calcula el valor de un rubro usando regla de 3:
+         * (obtenido / total) * valorMaxRubro
+         */
+        function calcularRubro(obtenidoInput, totalInput) {
+            const valorRubro = parseFloat(obtenidoInput.dataset.rubroValor || '0');
+            const inscripcionId = obtenidoInput.dataset.inscripcion;
+            const rubroId = obtenidoInput.dataset.rubro;
+
+            const obtenido = parseFloat(obtenidoInput.value);
+            const total = parseFloat(totalInput.value);
+
+            const hiddenInput = obtenidoInput.closest('td').querySelector('.js-hidden-calificacion');
+            const resultadoSpan = document.getElementById('res-' + inscripcionId + '-' + rubroId);
+
+            if (!isNaN(obtenido) && !isNaN(total) && total > 0) {
+                // Regla de 3: (obtenido / total) * valorMaxRubro
+                let resultado = (obtenido / total) * valorRubro;
+                resultado = Math.round(resultado * 100) / 100;
+
+                if (hiddenInput) hiddenInput.value = resultado;
+                if (resultadoSpan) resultadoSpan.textContent = resultado.toFixed(2);
+            } else if (obtenidoInput.value === '' && totalInput.value === '') {
+                if (hiddenInput) hiddenInput.value = '';
+                if (resultadoSpan) resultadoSpan.textContent = '—';
+            } else {
+                if (hiddenInput) hiddenInput.value = '';
+                if (resultadoSpan) resultadoSpan.textContent = '—';
+            }
         }
 
         function recalcularFila(row) {
             const totalRubros = parseFloat(row.dataset.totalRubros || '10');
-            const inputs = row.querySelectorAll('.js-calificacion-input');
+            const hiddenInputs = row.querySelectorAll('.js-hidden-calificacion');
 
             let sumaAportes = 0;
             let capturados = 0;
 
-            inputs.forEach(function (input) {
-                const valorRubro = parseFloat(input.dataset.valor || '0');
-                const calificacion = parseFloat(input.value);
-                const aporteTarget = document.getElementById(input.dataset.aporteTarget);
-
-                let aporte = 0;
-
-                if (!Number.isNaN(calificacion)) {
-                    const calificacionLimitada = Math.max(0, Math.min(valorRubro, calificacion));
-                    aporte = calificacionLimitada;
-                    sumaAportes += aporte;
+            hiddenInputs.forEach(function (hidden) {
+                const val = parseFloat(hidden.value);
+                if (!isNaN(val) && hidden.value !== '') {
+                    sumaAportes += val;
                     capturados++;
-                }
-
-                if (aporteTarget) {
-                    aporteTarget.textContent = aporte.toFixed(2);
                 }
             });
 
@@ -434,80 +448,33 @@
             const promedioTarget = row.querySelector('.js-promedio');
             const puntosTarget = row.querySelector('.js-puntos');
 
-            if (promedioTarget) {
-                promedioTarget.textContent = promedio.toFixed(2);
-            }
+            if (promedioTarget) promedioTarget.textContent = promedio.toFixed(2);
+            if (puntosTarget) puntosTarget.textContent = sumaAportes.toFixed(2);
 
-            if (puntosTarget) {
-                puntosTarget.textContent = sumaAportes.toFixed(2);
-            }
-
-            actualizarEstado(row, capturados, inputs.length, promedio);
+            actualizarEstado(row, capturados, hiddenInputs.length, promedio);
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            // Recalcular filas al cargar (para datos existentes)
             document.querySelectorAll('.js-alumno-row').forEach(function (row) {
                 recalcularFila(row);
             });
 
-            document.querySelectorAll('.js-calificacion-input').forEach(function (input) {
+            // Evento en inputs de "obtenido" y "total"
+            document.querySelectorAll('.js-obtenido, .js-total-posible').forEach(function (input) {
                 input.addEventListener('input', function () {
+                    const td = input.closest('td');
+                    const obtenidoInput = td.querySelector('.js-obtenido');
+                    const totalInput = td.querySelector('.js-total-posible');
+
+                    calcularRubro(obtenidoInput, totalInput);
+
                     const row = input.closest('.js-alumno-row');
-                    const valorRubro = parseFloat(input.dataset.valor || '0');
-                    let calificacion = parseFloat(input.value);
-
-                    // Frontend visual validation
-                    if (input.value !== '') {
-                        if (calificacion < 0 || calificacion > valorRubro) {
-                            input.classList.add('is-invalid');
-                        } else {
-                            input.classList.remove('is-invalid');
-                        }
-                    } else {
-                        input.classList.remove('is-invalid');
-                    }
-
-                    if (row) {
-                        recalcularFila(row);
-                    }
+                    if (row) recalcularFila(row);
                 });
             });
 
-            const form = document.querySelector('.js-confirm-save-form');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    let hasError = false;
-                    document.querySelectorAll('.js-calificacion-input').forEach(function(input) {
-                        if (input.value !== '') {
-                            const calificacion = parseFloat(input.value);
-                            const valorRubro = parseFloat(input.dataset.valor || '0');
-                            if (calificacion < 0 || calificacion > valorRubro) {
-                                hasError = true;
-                                input.classList.add('is-invalid');
-                            }
-                        }
-                    });
 
-                    if (hasError) {
-                        e.preventDefault();
-                        e.stopImmediatePropagation();
-                        
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error de validación',
-                                text: 'Una o más calificaciones tienen valores inválidos (menores a 0 o superiores al máximo permitido). Por favor, corrige los campos marcados en rojo antes de guardar.',
-                                confirmButtonColor: '#0056b3',
-                                customClass: {
-                                    popup: 'rounded-4'
-                                }
-                            });
-                        } else {
-                            alert('Una o más calificaciones tienen valores inválidos.');
-                        }
-                    }
-                });
-            }
         });
     </script>
 @endpush
