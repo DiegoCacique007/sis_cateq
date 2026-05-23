@@ -4,6 +4,159 @@
 @section('header_title', 'Gestión de Rubros')
 
 @section('content')
+    <style>
+        .rubros-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        .rubro-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 155px;
+        }
+
+        .rubro-card:hover {
+            transform: translateY(-4px);
+            box-shadow:
+                0 10px 15px -3px rgba(30, 58, 138, 0.10),
+                0 4px 6px -2px rgba(30, 58, 138, 0.05);
+        }
+
+        .rubro-card .card-header-content {
+            margin-bottom: 1rem;
+            padding-right: 4.5rem;
+        }
+
+        .rubro-card .rubro-name {
+            color: #1e3a8a;
+            font-weight: 700;
+            font-size: 1.08rem;
+            margin: 0 0 0.25rem 0;
+            line-height: 1.25;
+        }
+
+        .rubro-card .rubro-subtitle {
+            color: #64748b;
+            font-weight: 400;
+            font-size: 0.875rem;
+            display: block;
+        }
+
+        .rubro-card .card-body-content {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
+
+        .rubro-card .info-badge {
+            border-radius: 9999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 400;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .rubro-card .criteria-badge {
+            background-color: #eef2ff;
+            color: #2563eb;
+            border: 1px solid #3b82f6;
+        }
+
+        .rubro-card .value-badge {
+            background-color: #ecfdf5;
+            color: #059669;
+            border: 1px solid #10b981;
+        }
+
+        .rubro-card .card-actions {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .rubro-card .btn-circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+            font-size: 0.9rem;
+        }
+
+        .rubro-card .btn-edit {
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .rubro-card .btn-edit:hover {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        .rubro-card .btn-delete {
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .rubro-card .btn-delete:hover {
+            background-color: #ef4444;
+            color: #ffffff;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+            border: 1px dashed #e2e8f0;
+            border-radius: 0.75rem;
+            background: #ffffff;
+        }
+
+        .empty-state i {
+            font-size: 2.4rem;
+            color: #94a3b8;
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+
+        .module-filter-bar {
+            background: #ffffff;
+        }
+
+        .modal-content {
+            border-radius: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .rubros-grid {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+        }
+    </style>
+
     <div class="card card-parroquia module-card border-0 shadow-sm">
         <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
@@ -16,10 +169,16 @@
             </button>
         </div>
 
-        <div class="card-body border-bottom">
+        <div class="card-body border-bottom module-filter-bar">
             <form method="GET" action="{{ route('secretaria.rubros.index') }}" class="row g-2 align-items-center">
                 <div class="col-md-8">
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Buscar rubro o valor...">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request('search') }}"
+                        class="form-control"
+                        placeholder="Buscar rubro o valor..."
+                    >
                 </div>
 
                 <div class="col-md-2">
@@ -39,56 +198,61 @@
             </form>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
-                <tr>
-                    <th>Rubro</th>
-                    <th>Valor</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-                </thead>
+        <div class="rubros-grid">
+            @forelse($registros as $registro)
+                <div class="rubro-card">
+                    <div class="card-actions">
+                        <button
+                            type="button"
+                            class="btn-circle btn-edit"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalEditar{{ $registro->id }}"
+                            title="Editar"
+                        >
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
 
-                <tbody>
-                @forelse($registros as $registro)
-                    <tr>
-                        <td>
-                            <span class="cell-title">{{ $registro->nombre }}</span>
-                            <span class="cell-subtitle">Criterio de evaluación</span>
-                        </td>
+                        <form
+                            action="{{ route('secretaria.rubros.destroy', $registro->id) }}"
+                            method="POST"
+                            class="d-inline js-delete-form"
+                            data-message="Esta acción eliminará el rubro seleccionado."
+                        >
+                            @csrf
+                            @method('DELETE')
 
-                        <td>
-                            <span class="soft-badge">
-                                <i class="bi bi-percent"></i>
-                                {{ number_format($registro->valor, 2) }}
-                            </span>
-                        </td>
-
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary rounded-circle btn-action" data-bs-toggle="modal" data-bs-target="#modalEditar{{ $registro->id }}">
-                                <i class="bi bi-pencil-fill"></i>
+                            <button type="submit" class="btn-circle btn-delete" title="Eliminar">
+                                <i class="bi bi-trash-fill"></i>
                             </button>
+                        </form>
+                    </div>
 
-                            <form action="{{ route('secretaria.rubros.destroy', $registro->id) }}"
-                                  method="POST"
-                                  class="d-inline js-delete-form"
-                                  data-message="Esta acción eliminará el rubro seleccionado.">
-                                @csrf
-                                @method('DELETE')
+                    <div class="card-header-content">
+                        <h4 class="rubro-name">
+                            {{ $registro->nombre }}
+                        </h4>
 
-                                <button class="btn btn-sm btn-outline-danger rounded-circle btn-action">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">No hay rubros registrados.</td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
+                        <span class="rubro-subtitle">Criterio de evaluación</span>
+                    </div>
+
+                    <div class="card-body-content">
+                        <span class="info-badge criteria-badge">
+                            <i class="bi bi-ui-checks-grid"></i>
+                            Rubro
+                        </span>
+
+                        <span class="info-badge value-badge">
+                            <i class="bi bi-percent"></i>
+                            {{ number_format($registro->valor, 2) }}
+                        </span>
+                    </div>
+                </div>
+            @empty
+                <div class="empty-state">
+                    <i class="bi bi-ui-checks-grid"></i>
+                    No hay rubros registrados.
+                </div>
+            @endforelse
         </div>
 
         <div class="card-footer bg-white">
@@ -110,18 +274,39 @@
                     <div class="modal-body row g-3">
                         <div class="col-md-8">
                             <label class="form-label">Nombre del rubro</label>
-                            <input type="text" name="nombre" value="{{ old('nombre') }}" class="form-control" placeholder="Ej. Examen" required>
+                            <input
+                                type="text"
+                                name="nombre"
+                                value="{{ old('nombre') }}"
+                                class="form-control"
+                                placeholder="Ej. Examen"
+                                required
+                            >
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Valor</label>
-                            <input type="number" name="valor" value="{{ old('valor') }}" class="form-control" min="0" max="100" step="0.01" required>
+                            <input
+                                type="number"
+                                name="valor"
+                                value="{{ old('valor') }}"
+                                class="form-control"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                required
+                            >
                         </div>
                     </div>
 
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                        <button class="btn btn-parroquia rounded-pill px-4">Guardar</button>
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button class="btn btn-parroquia rounded-pill px-4">
+                            Guardar
+                        </button>
                     </div>
                 </form>
             </div>
@@ -144,18 +329,38 @@
                         <div class="modal-body row g-3">
                             <div class="col-md-8">
                                 <label class="form-label">Nombre del rubro</label>
-                                <input type="text" name="nombre" value="{{ old('nombre', $registro->nombre) }}" class="form-control" required>
+                                <input
+                                    type="text"
+                                    name="nombre"
+                                    value="{{ old('nombre', $registro->nombre) }}"
+                                    class="form-control"
+                                    required
+                                >
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Valor</label>
-                                <input type="number" name="valor" value="{{ old('valor', $registro->valor) }}" class="form-control" min="0" max="100" step="0.01" required>
+                                <input
+                                    type="number"
+                                    name="valor"
+                                    value="{{ old('valor', $registro->valor) }}"
+                                    class="form-control"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    required
+                                >
                             </div>
                         </div>
 
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                            <button class="btn btn-parroquia rounded-pill px-4">Actualizar</button>
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button class="btn btn-parroquia rounded-pill px-4">
+                                Actualizar
+                            </button>
                         </div>
                     </form>
                 </div>

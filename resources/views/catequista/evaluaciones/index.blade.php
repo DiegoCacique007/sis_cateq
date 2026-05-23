@@ -4,6 +4,86 @@
 @section('header_title', 'Captura de Calificaciones')
 
 @section('content')
+    <style>
+        .grupo-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grupo-info-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.15rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            min-height: 125px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .grupo-info-card:hover {
+            transform: translateY(-4px);
+            box-shadow:
+                0 10px 15px -3px rgba(30, 58, 138, 0.10),
+                0 4px 6px -2px rgba(30, 58, 138, 0.05);
+        }
+
+        .grupo-info-card .grupo-info-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.7rem;
+            font-size: 1.2rem;
+        }
+
+        .grupo-info-card .grupo-info-label {
+            color: #64748b;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .grupo-info-card .grupo-info-value {
+            color: #1e3a8a;
+            font-size: 1rem;
+            font-weight: 800;
+            line-height: 1.25;
+            display: block;
+        }
+
+        .grupo-info-card.theme-blue .grupo-info-icon {
+            background: #eef2ff;
+            color: #2563eb;
+            border: 1px solid #3b82f6;
+        }
+
+        .grupo-info-card.theme-cyan .grupo-info-icon {
+            background: #f0f9ff;
+            color: #0284c7;
+            border: 1px solid #0284c7;
+        }
+
+        .grupo-info-card.theme-green .grupo-info-icon {
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid #10b981;
+        }
+
+        .grupo-info-card.theme-orange .grupo-info-icon {
+            background: #fff7ed;
+            color: #d97706;
+            border: 1px solid #f59e0b;
+        }
+    </style>
+
     @if($asignacion)
         <div class="card card-parroquia module-card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3">
@@ -14,40 +94,48 @@
             </div>
 
             <div class="card-body">
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6 col-xl-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
-                            <div class="card-body">
-                                <span class="cell-subtitle">Comunidad</span>
-                                <span class="cell-title">{{ $asignacion->comunidad }}</span>
-                            </div>
+                <div class="grupo-info-grid">
+                    <div class="grupo-info-card theme-blue">
+                        <div>
+                            <span class="grupo-info-icon">
+                                <i class="bi bi-geo-alt"></i>
+                            </span>
+
+                            <span class="grupo-info-label">Comunidad</span>
+                            <span class="grupo-info-value">{{ $asignacion->comunidad }}</span>
                         </div>
                     </div>
 
-                    <div class="col-md-6 col-xl-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
-                            <div class="card-body">
-                                <span class="cell-subtitle">Grupo</span>
-                                <span class="cell-title">{{ $asignacion->grupo }}</span>
-                            </div>
+                    <div class="grupo-info-card theme-cyan">
+                        <div>
+                            <span class="grupo-info-icon">
+                                <i class="bi bi-collection"></i>
+                            </span>
+
+                            <span class="grupo-info-label">Grupo</span>
+                            <span class="grupo-info-value">{{ $asignacion->grupo }}</span>
                         </div>
                     </div>
 
-                    <div class="col-md-6 col-xl-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
-                            <div class="card-body">
-                                <span class="cell-subtitle">Nivel</span>
-                                <span class="cell-title">{{ $asignacion->nivel }}</span>
-                            </div>
+                    <div class="grupo-info-card theme-green">
+                        <div>
+                            <span class="grupo-info-icon">
+                                <i class="bi bi-layers"></i>
+                            </span>
+
+                            <span class="grupo-info-label">Nivel</span>
+                            <span class="grupo-info-value">{{ $asignacion->nivel }}</span>
                         </div>
                     </div>
 
-                    <div class="col-md-6 col-xl-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
-                            <div class="card-body">
-                                <span class="cell-subtitle">Periodo</span>
-                                <span class="cell-title">{{ $asignacion->periodo }}</span>
-                            </div>
+                    <div class="grupo-info-card theme-orange">
+                        <div>
+                            <span class="grupo-info-icon">
+                                <i class="bi bi-calendar-event"></i>
+                            </span>
+
+                            <span class="grupo-info-label">Periodo</span>
+                            <span class="grupo-info-value">{{ $asignacion->periodo }}</span>
                         </div>
                     </div>
                 </div>
@@ -65,28 +153,28 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                    @else
-                        <input type="hidden" name="asignacion_id" value="{{ $asignacionId }}">
-                        <div class="col-md-9">
-                    @endif
-                        <label class="form-label">Unidad a evaluar</label>
-                        <select name="unidad_id" class="form-select" required>
-                            <option value="">Selecciona una unidad</option>
-                            @foreach($unidades as $unidad)
-                                <option value="{{ $unidad->id }}" {{ (string) $unidadId === (string) $unidad->id ? 'selected' : '' }}>
-                                    {{ $unidad->text }}
-                                </option>
-                            @endforeach
-                            <option value="final" {{ $unidadId === 'final' ? 'selected' : '' }}>Resumen Final de Nivel</option>
-                        </select>
-                    </div>
+                            @else
+                                <input type="hidden" name="asignacion_id" value="{{ $asignacionId }}">
+                                <div class="col-md-9">
+                                    @endif
+                                    <label class="form-label">Unidad a evaluar</label>
+                                    <select name="unidad_id" class="form-select" required>
+                                        <option value="">Selecciona una unidad</option>
+                                        @foreach($unidades as $unidad)
+                                            <option value="{{ $unidad->id }}" {{ (string) $unidadId === (string) $unidad->id ? 'selected' : '' }}>
+                                                {{ $unidad->text }}
+                                            </option>
+                                        @endforeach
+                                        <option value="final" {{ $unidadId === 'final' ? 'selected' : '' }}>Resumen Final de Nivel</option>
+                                    </select>
+                                </div>
 
-                    <div class="col-md-3 d-grid align-self-end">
-                        <button class="btn btn-parroquia">
-                            <i class="bi bi-search me-1"></i>
-                            Cargar alumnos
-                        </button>
-                    </div>
+                                <div class="col-md-3 d-grid align-self-end">
+                                    <button class="btn btn-parroquia">
+                                        <i class="bi bi-search me-1"></i>
+                                        Cargar alumnos
+                                    </button>
+                                </div>
                 </form>
             </div>
         </div>
@@ -265,31 +353,31 @@
                                                     <td class="text-center">
                                                         {{-- Hidden input que envía el valor calculado al backend --}}
                                                         <input type="hidden"
-                                                            name="calificaciones[{{ $alumno->inscripcion_id }}][{{ $rubro->id }}]"
-                                                            class="js-hidden-calificacion"
-                                                            value="{{ $calificacion }}"
-                                                            data-valor="{{ $rubro->valor }}"
+                                                               name="calificaciones[{{ $alumno->inscripcion_id }}][{{ $rubro->id }}]"
+                                                               class="js-hidden-calificacion"
+                                                               value="{{ $calificacion }}"
+                                                               data-valor="{{ $rubro->valor }}"
                                                         >
 
                                                         <div class="d-flex align-items-center justify-content-center gap-1">
                                                             <input type="number"
-                                                                class="form-control form-control-sm text-center fw-bold js-obtenido"
-                                                                style="width: 58px;"
-                                                                step="any"
-                                                                placeholder="0"
-                                                                data-rubro-valor="{{ $rubro->valor }}"
-                                                                data-inscripcion="{{ $alumno->inscripcion_id }}"
-                                                                data-rubro="{{ $rubro->id }}"
+                                                                   class="form-control form-control-sm text-center fw-bold js-obtenido"
+                                                                   style="width: 58px;"
+                                                                   step="any"
+                                                                   placeholder="0"
+                                                                   data-rubro-valor="{{ $rubro->valor }}"
+                                                                   data-inscripcion="{{ $alumno->inscripcion_id }}"
+                                                                   data-rubro="{{ $rubro->id }}"
                                                             >
                                                             <span class="text-muted fw-bold">/</span>
                                                             <input type="number"
-                                                                class="form-control form-control-sm text-center fw-bold js-total-posible"
-                                                                style="width: 58px;"
-                                                                step="any"
-                                                                placeholder="0"
-                                                                data-rubro-valor="{{ $rubro->valor }}"
-                                                                data-inscripcion="{{ $alumno->inscripcion_id }}"
-                                                                data-rubro="{{ $rubro->id }}"
+                                                                   class="form-control form-control-sm text-center fw-bold js-total-posible"
+                                                                   style="width: 58px;"
+                                                                   step="any"
+                                                                   placeholder="0"
+                                                                   data-rubro-valor="{{ $rubro->valor }}"
+                                                                   data-inscripcion="{{ $alumno->inscripcion_id }}"
+                                                                   data-rubro="{{ $rubro->id }}"
                                                             >
                                                         </div>
                                                         <span class="cell-subtitle mt-1 d-block">
@@ -473,8 +561,6 @@
                     if (row) recalcularFila(row);
                 });
             });
-
-
         });
     </script>
 @endpush

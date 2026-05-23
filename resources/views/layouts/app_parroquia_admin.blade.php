@@ -411,6 +411,7 @@
                     @php
                         $gestionEscolarActiva =
                             request()->routeIs('secretaria.alumnos.*') ||
+                            request()->routeIs('secretaria.alumnos_comunidades.*') ||
                             request()->routeIs('secretaria.tutores.*') ||
                             request()->routeIs('secretaria.inscripciones.*') ||
                             request()->routeIs('secretaria.asigna_grupo.*');
@@ -467,6 +468,10 @@
 
                             <a class="nav-link {{ request()->routeIs('secretaria.asigna_grupo.*') ? 'active' : '' }}" href="{{ route('secretaria.asigna_grupo.index') }}">
                                 <i class="bi bi-diagram-3"></i><span>Asignar grupos</span>
+                            </a>
+
+                              <a class="nav-link {{ request()->routeIs('secretaria.alumnos_comunidades.*') ? 'active' : '' }}" href="{{ route('secretaria.alumnos_comunidades.index') }}">
+                                <i class="bi bi-file-earmark-person"></i><span>Alumnos por Comunidad</span>
                             </a>
                         </div>
                     </div>

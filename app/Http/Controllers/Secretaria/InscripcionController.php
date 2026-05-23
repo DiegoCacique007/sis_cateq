@@ -55,8 +55,6 @@ class InscripcionController extends Controller
             ->orderBy('apellido_paterno')
             ->get();
 
-
-
         $grupos = DB::table('grupos')
             ->whereNull('deleted_at')
             ->select('id', 'nombre')
@@ -92,6 +90,9 @@ class InscripcionController extends Controller
 
         $validated['periodo_id'] = session('periodo_activo_id');
 
+        // Toda inscripción nueva se registra como Alta automáticamente.
+        $validated['estado'] = 1;
+
         Inscripcion::create($validated);
 
         return redirect()
@@ -114,12 +115,16 @@ class InscripcionController extends Controller
                     ->whereNull('deleted_at')
                     ->ignore($inscripcion->id),
             ],
+            'estado' => ['required', 'integer', 'in:0,1'],
         ], [
             'alumno_id.required' => 'Selecciona un alumno.',
             'alumno_id.exists' => 'El alumno seleccionado no existe.',
             'grupo_id.required' => 'Selecciona un grupo.',
             'grupo_id.exists' => 'El grupo seleccionado no existe.',
             'grupo_id.unique' => 'Este alumno ya está inscrito en este grupo y periodo.',
+            'estado.required' => 'Selecciona el estado de la inscripción.',
+            'estado.integer' => 'El estado de la inscripción no es válido.',
+            'estado.in' => 'El estado de la inscripción debe ser Alta o Baja.',
         ]);
 
         $validated['periodo_id'] = session('periodo_activo_id');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Secretaria;
 
 use App\Http\Controllers\Controller;
 use App\Models\Secretaria\Alumno;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -66,7 +67,6 @@ class AlumnoController extends Controller
                     ->where('apellido_materno', $request->apellido_materno)
                     ->whereNull('deleted_at'),
             ],
-            'estado' => ['required', 'in:0,1'],
             'fecha_nacimiento' => ['nullable', 'date'],
         ], [
             'nombre.required' => 'El nombre del alumno es obligatorio.',
@@ -74,16 +74,31 @@ class AlumnoController extends Controller
             'comunidad_id.required' => 'Selecciona una comunidad.',
             'comunidad_id.exists' => 'La comunidad seleccionada no existe.',
             'comunidad_id.unique' => 'Este alumno ya está registrado en esta comunidad.',
-            'estado.required' => 'Selecciona el estado del alumno.',
-            'estado.in' => 'El estado seleccionado no es válido.',
             'fecha_nacimiento.date' => 'La fecha de nacimiento no es válida.',
         ]);
+
+        if (!empty($validated['fecha_nacimiento'])) {
+            $fechaNacimiento = Carbon::parse($validated['fecha_nacimiento']);
+            $hoy = Carbon::now();
+
+            if (($hoy->year - $fechaNacimiento->year) < 7) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'No se puede continuar: El alumno tiene menos de 7 años y no cumple los 7 en el año en curso.');
+            }
+
+            if ($fechaNacimiento->age >= 15) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'No se puede continuar: El alumno ya tiene 15 años cumplidos o más.');
+            }
+        }
 
         Alumno::create($validated);
 
         return redirect()
             ->route('secretaria.alumnos.index')
-            ->with('success', 'Alumno registrado correctamente.');
+            ->with('success', 'Alumno registrado correctamente. Se puede continuar en cualquiera de los niveles.');
     }
 
     public function update(Request $request, $id)
@@ -104,7 +119,6 @@ class AlumnoController extends Controller
                     ->whereNull('deleted_at')
                     ->ignore($alumno->id),
             ],
-            'estado' => ['required', 'in:0,1'],
             'fecha_nacimiento' => ['nullable', 'date'],
         ], [
             'nombre.required' => 'El nombre del alumno es obligatorio.',
@@ -112,16 +126,31 @@ class AlumnoController extends Controller
             'comunidad_id.required' => 'Selecciona una comunidad.',
             'comunidad_id.exists' => 'La comunidad seleccionada no existe.',
             'comunidad_id.unique' => 'Este alumno ya está registrado en esta comunidad.',
-            'estado.required' => 'Selecciona el estado del alumno.',
-            'estado.in' => 'El estado seleccionado no es válido.',
             'fecha_nacimiento.date' => 'La fecha de nacimiento no es válida.',
         ]);
+
+        if (!empty($validated['fecha_nacimiento'])) {
+            $fechaNacimiento = Carbon::parse($validated['fecha_nacimiento']);
+            $hoy = Carbon::now();
+
+            if (($hoy->year - $fechaNacimiento->year) < 7) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'No se puede continuar: El alumno tiene menos de 7 años y no cumple los 7 en el año en curso.');
+            }
+
+            if ($fechaNacimiento->age >= 15) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'No se puede continuar: El alumno ya tiene 15 años cumplidos o más.');
+            }
+        }
 
         $alumno->update($validated);
 
         return redirect()
             ->route('secretaria.alumnos.index')
-            ->with('success', 'Alumno actualizado correctamente.');
+            ->with('success', 'Alumno actualizado correctamente. Se puede continuar en cualquiera de los niveles.');
     }
 
     public function destroy($id)

@@ -3,11 +3,12 @@
 use Illuminate\Support\Facades\Route;
 
 // Secretaría
+use App\Http\Controllers\Secretaria\DashboardController;
 use App\Http\Controllers\Secretaria\AlumnoController;
+use App\Http\Controllers\Secretaria\AlumnoComunidadController;
 use App\Http\Controllers\Secretaria\AsignaGrupoController;
 use App\Http\Controllers\Secretaria\BoletaController;
 use App\Http\Controllers\Secretaria\ComunidadController;
-use App\Http\Controllers\Secretaria\DocumentoController;
 use App\Http\Controllers\Secretaria\EvaluacionController;
 use App\Http\Controllers\Secretaria\GrupoController;
 use App\Http\Controllers\Secretaria\InscripcionController;
@@ -56,13 +57,14 @@ Route::middleware(['auth', \App\Http\Middleware\NoCacheHeaders::class])->get('/d
 // SECRETARÍA - ADMIN TOTAL (CRUD completo)
 // ==========================================
 Route::middleware(['auth', 'role:secretaria', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])->prefix('secretaria')->name('secretaria.')->group(function () {
-    Route::view('/dashboard', 'secretaria.dashboard')->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/usuarios/pendientes', [UsuariosPendientesController::class, 'index'])->name('usuarios.pendientes');
     Route::post('/usuarios/{user}/aprobar', [UsuariosPendientesController::class, 'aprobar'])->name('usuarios.aprobar');
     Route::post('/usuarios/{user}/bloquear', [UsuariosPendientesController::class, 'bloquear'])->name('usuarios.bloquear');
 
     Route::resource('alumnos', AlumnoController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('/alumnos-comunidades', [AlumnoComunidadController::class, 'index'])->name('alumnos_comunidades.index');
     Route::resource('tutores', TutorController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('inscripciones', InscripcionController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('asigna_grupo', AsignaGrupoController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -102,7 +104,7 @@ Route::middleware(['auth', 'role:catequista', \App\Http\Middleware\NoCacheHeader
         Route::get('/dashboard', [CatequistaController::class, 'index'])->name('dashboard');
 
         Route::get('/mi-grupo', [MiGrupoController::class, 'index'])->name('mi_grupo');
-        Route::get('/mi-grupo/exportar-asistencia', [MiGrupoController::class, 'exportarAsistencia'])->name('mi_grupo.exportar_asistencia');
+        Route::get('/mi-grupo/exportar-asistencia-pdf', [MiGrupoController::class, 'exportarAsistenciaPdf'])->name('asistencia.pdf');
 
         Route::get('/evaluaciones', [CatequistaEvaluacionController::class, 'index'])->name('evaluaciones.index');
         Route::post('/evaluaciones/guardar', [CatequistaEvaluacionController::class, 'guardar'])->name('evaluaciones.guardar');

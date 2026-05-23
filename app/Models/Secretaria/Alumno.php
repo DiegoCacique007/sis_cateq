@@ -17,25 +17,11 @@ class Alumno extends Model
         'apellido_paterno',
         'apellido_materno',
         'comunidad_id',
-        'estado',
         'fecha_nacimiento',
-        // Datos de Bautizo
-        'bautizo_lugar',
-        'bautizo_fecha',
-        'bautizo_libro',
-        'bautizo_acta',
-        // Datos de Primera Comunión
-        'primera_comunion_lugar',
-        'primera_comunion_fecha',
-        'primera_comunion_libro',
-        'primera_comunion_acta',
     ];
 
     protected $casts = [
-        'estado' => 'integer',
         'fecha_nacimiento' => 'date',
-        'bautizo_fecha' => 'date',
-        'primera_comunion_fecha' => 'date',
     ];
 
     public function comunidad()
