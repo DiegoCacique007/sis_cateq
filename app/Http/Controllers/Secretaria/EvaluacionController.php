@@ -14,7 +14,6 @@ class EvaluacionController extends Controller
         $periodoId = session('periodo_activo_id');
         $grupoId = $request->input('grupo_id');
         $unidadId = $request->input('unidad_id');
-        $rubroId = $request->input('rubro_id');
 
         $periodos = DB::table('periodos')
             ->whereNull('deleted_at')
@@ -51,18 +50,13 @@ class EvaluacionController extends Controller
             ->get();
 
         $alumnos = collect();
+        $calificacionesMap = [];
 
-        $contextoCompleto = $periodoId && $grupoId && $unidadId && $rubroId;
+        $contextoCompleto = $periodoId && $grupoId && $unidadId;
 
         if ($contextoCompleto) {
             $alumnos = DB::table('inscripciones')
                 ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
-                ->leftJoin('evaluaciones', function ($join) use ($unidadId, $rubroId) {
-                    $join->on('evaluaciones.inscripcion_id', '=', 'inscripciones.id')
-                        ->where('evaluaciones.unidad_id', '=', $unidadId)
-                        ->where('evaluaciones.rubro_id', '=', $rubroId)
-                        ->whereNull('evaluaciones.deleted_at');
-                })
                 ->where('inscripciones.periodo_id', $periodoId)
                 ->where('inscripciones.grupo_id', $grupoId)
                 ->whereNull('inscripciones.deleted_at')
@@ -70,13 +64,25 @@ class EvaluacionController extends Controller
                 ->select(
                     'inscripciones.id as inscripcion_id',
                     'alumnos.id as alumno_id',
-                    DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre"),
-                    'evaluaciones.id as evaluacion_id',
-                    'evaluaciones.calificacion'
+                    DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre")
                 )
                 ->orderBy('alumnos.nombre')
                 ->orderBy('alumnos.apellido_paterno')
                 ->get();
+
+            $inscripcionIds = $alumnos->pluck('inscripcion_id')->toArray();
+
+            if (!empty($inscripcionIds)) {
+                $evaluacionesRaw = DB::table('evaluaciones')
+                    ->whereIn('inscripcion_id', $inscripcionIds)
+                    ->where('unidad_id', $unidadId)
+                    ->whereNull('deleted_at')
+                    ->get();
+
+                foreach ($evaluacionesRaw as $ev) {
+                    $calificacionesMap[$ev->inscripcion_id][$ev->rubro_id] = $ev;
+                }
+            }
         }
 
         return view('secretaria.evaluaciones.index', compact(
@@ -88,8 +94,8 @@ class EvaluacionController extends Controller
             'periodoId',
             'grupoId',
             'unidadId',
-            'rubroId',
-            'contextoCompleto'
+            'contextoCompleto',
+            'calificacionesMap'
         ));
     }
 
@@ -98,21 +104,18 @@ class EvaluacionController extends Controller
         $validated = $request->validate([
             'grupo_id' => ['required', 'exists:grupos,id'],
             'unidad_id' => ['required', 'exists:unidades,id'],
-            'rubro_id' => ['required', 'exists:rubros,id'],
             'calificaciones' => ['required', 'array'],
-            'calificaciones.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'calificaciones.*.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ], [
             'grupo_id.required' => 'Selecciona un grupo.',
             'grupo_id.exists' => 'El grupo seleccionado no existe.',
             'unidad_id.required' => 'Selecciona una unidad.',
             'unidad_id.exists' => 'La unidad seleccionada no existe.',
-            'rubro_id.required' => 'Selecciona un rubro.',
-            'rubro_id.exists' => 'El rubro seleccionado no existe.',
             'calificaciones.required' => 'No se recibieron calificaciones para guardar.',
             'calificaciones.array' => 'El formato de calificaciones no es válido.',
-            'calificaciones.*.numeric' => 'Cada calificación debe ser numérica.',
-            'calificaciones.*.min' => 'La calificación no puede ser menor a 0.',
-            'calificaciones.*.max' => 'La calificación no puede ser mayor a 100.',
+            'calificaciones.*.*.numeric' => 'Cada calificación debe ser numérica.',
+            'calificaciones.*.*.min' => 'La calificación no puede ser menor a 0.',
+            'calificaciones.*.*.max' => 'La calificación no puede ser mayor a 100.',
         ]);
 
         $validated['periodo_id'] = session('periodo_activo_id');
@@ -128,45 +131,45 @@ class EvaluacionController extends Controller
         $guardadas = 0;
         $eliminadas = 0;
 
-        foreach ($validated['calificaciones'] as $inscripcionId => $calificacion) {
+        foreach ($validated['calificaciones'] as $inscripcionId => $rubrosData) {
             if (!in_array((string) $inscripcionId, $inscripcionesValidas, true)) {
                 continue;
             }
 
-            $evaluacion = Evaluacion::withTrashed()
-                ->where('inscripcion_id', $inscripcionId)
-                ->where('unidad_id', $validated['unidad_id'])
-                ->where('rubro_id', $validated['rubro_id'])
-                ->first();
+            foreach ($rubrosData as $rubroId => $calificacion) {
+                $evaluacion = Evaluacion::withTrashed()
+                    ->where('inscripcion_id', $inscripcionId)
+                    ->where('unidad_id', $validated['unidad_id'])
+                    ->where('rubro_id', $rubroId)
+                    ->first();
 
-            if ($calificacion === null || $calificacion === '') {
-                if ($evaluacion && !$evaluacion->trashed()) {
-                    $evaluacion->delete();
-                    $eliminadas++;
+                if ($calificacion === null || $calificacion === '') {
+                    if ($evaluacion && !$evaluacion->trashed()) {
+                        $evaluacion->delete();
+                        $eliminadas++;
+                    }
+                    continue;
                 }
 
-                continue;
-            }
-
-            if ($evaluacion) {
-                if ($evaluacion->trashed()) {
-                    $evaluacion->restore();
+                if ($evaluacion) {
+                    if ($evaluacion->trashed()) {
+                        $evaluacion->restore();
+                    }
+                    $evaluacion->update([
+                        'calificacion' => $calificacion,
+                    ]);
+                } else {
+                    Evaluacion::create([
+                        'inscripcion_id' => $inscripcionId,
+                        'unidad_id' => $validated['unidad_id'],
+                        'rubro_id' => $rubroId,
+                        'calificacion' => $calificacion,
+                        'periodo_id' => $validated['periodo_id'],
+                    ]);
                 }
 
-                $evaluacion->update([
-                    'calificacion' => $calificacion,
-                ]);
-            } else {
-                Evaluacion::create([
-                    'inscripcion_id' => $inscripcionId,
-                    'unidad_id' => $validated['unidad_id'],
-                    'rubro_id' => $validated['rubro_id'],
-                    'calificacion' => $calificacion,
-                    'periodo_id' => $validated['periodo_id'],
-                ]);
+                $guardadas++;
             }
-
-            $guardadas++;
         }
 
         $mensaje = "Evaluaciones guardadas correctamente. Registros actualizados: {$guardadas}.";
@@ -180,7 +183,6 @@ class EvaluacionController extends Controller
                 'periodo_id' => $validated['periodo_id'],
                 'grupo_id' => $validated['grupo_id'],
                 'unidad_id' => $validated['unidad_id'],
-                'rubro_id' => $validated['rubro_id'],
             ])
             ->with('success', $mensaje);
     }

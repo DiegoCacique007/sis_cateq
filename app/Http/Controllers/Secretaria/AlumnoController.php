@@ -39,6 +39,9 @@ class AlumnoController extends Controller
                         ->orWhere('comunidades.comunidad', 'LIKE', "%{$search}%");
                 });
             })
+            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($query) {
+                $query->where('alumnos.comunidad_id', auth()->user()->comunidad_id);
+            })
             ->orderBy('alumnos.nombre')
             ->orderBy('alumnos.apellido_paterno')
             ->paginate($perPage);

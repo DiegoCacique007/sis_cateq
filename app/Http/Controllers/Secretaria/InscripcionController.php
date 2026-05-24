@@ -38,12 +38,18 @@ class InscripcionController extends Controller
                         ->orWhere('grupos.nombre', 'LIKE', "%{$search}%");
                 });
             })
+            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($query) {
+                $query->where('alumnos.comunidad_id', auth()->user()->comunidad_id);
+            })
             ->orderBy('alumnos.nombre')
             ->orderBy('alumnos.apellido_paterno')
             ->paginate($perPage);
 
         $alumnos = DB::table('alumnos')
             ->whereNull('deleted_at')
+            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($q) {
+                $q->where('comunidad_id', auth()->user()->comunidad_id);
+            })
             ->select(
                 'id',
                 'nombre',

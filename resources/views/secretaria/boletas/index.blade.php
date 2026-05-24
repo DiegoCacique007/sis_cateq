@@ -1,4 +1,9 @@
-@extends('layouts.app_parroquia_admin')
+@extends($layout_role ?? 'layouts.app_parroquia_admin')
+
+@php
+    $route_name = ($route_prefix ?? 'secretaria.') . 'boletas.index';
+    $route_generar = ($route_prefix ?? 'secretaria.') . 'boletas.generar';
+@endphp
 
 @section('title', 'Boletas - Secretaría')
 @section('header_title', 'Boletas de Evaluación')
@@ -191,7 +196,7 @@
         </div>
 
         <div class="card-body filter-card">
-            <form method="GET" action="{{ route('secretaria.boletas.index') }}" class="row g-3 align-items-end">
+            <form method="GET" action="{{ route($route_name) }}" class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label">Catequista</label>
                     <select name="catequista_id" class="form-select">
@@ -235,7 +240,7 @@
                             Buscar
                         </button>
 
-                        <a href="{{ route('secretaria.boletas.index') }}"
+                        <a href="{{ route($route_name) }}"
                            class="btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center"
                            style="height: 46px;">
                             <i class="bi bi-x-circle me-1"></i>
@@ -301,7 +306,7 @@
                         </div>
 
                         <div class="boleta-actions">
-                            <a href="{{ route('secretaria.boletas.generar', $insc->id) }}?asignacion_id={{ $insc->asignacion->id ?? '' }}"
+                            <a href="{{ route($route_generar, $insc->id) }}?asignacion_id={{ $insc->asignacion->id ?? '' }}"
                                target="_blank"
                                class="btn-generate-pdf">
                                 <i class="bi bi-file-earmark-pdf"></i>

@@ -1,4 +1,4 @@
-@extends('layouts.app_parroquia_admin')
+@extends($layout_role ?? 'layouts.app_parroquia_admin')
 
 @section('title', 'Tutores - Secretaría')
 @section('header_title', 'Gestión de Tutores')
@@ -170,13 +170,15 @@
                 <small class="text-muted">Administración de tutores asociados a alumnos.</small>
             </div>
 
+            @if(auth()->check() && auth()->user()->role === 'secretaria')
             <button class="btn btn-parroquia rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalCrear">
                 <i class="bi bi-plus-lg me-1"></i> Nuevo tutor
             </button>
+            @endif
         </div>
 
         <div class="card-body border-bottom module-filter-bar">
-            <form method="GET" action="{{ route('secretaria.tutores.index') }}" class="row g-2 align-items-center">
+            <form method="GET" action="{{ route(($route_prefix ?? 'secretaria.') . 'tutores.index') }}" class="row g-2 align-items-center">
                 <div class="col-md-8">
                     <input
                         type="text"
@@ -207,6 +209,7 @@
         <div class="tutores-grid">
             @forelse($registros as $registro)
                 <div class="tutor-card">
+                    @if(auth()->check() && auth()->user()->role === 'secretaria')
                     <div class="card-actions">
                         <button
                             type="button"
@@ -232,6 +235,7 @@
                             </button>
                         </form>
                     </div>
+                    @endif
 
                     <div class="card-header-content">
                         <h4 class="tutor-name">
@@ -271,6 +275,7 @@
         </div>
     </div>
 
+    @if(auth()->check() && auth()->user()->role === 'secretaria')
     <div class="modal fade" id="modalCrear" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
@@ -437,4 +442,5 @@
             </div>
         </div>
     @endforeach
+    @endif
 @endsection

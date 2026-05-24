@@ -1,4 +1,10 @@
-@extends('layouts.app_parroquia_admin')
+@extends($layout_role ?? 'layouts.app_parroquia_admin')
+
+@php
+   $route_name = isset($route_prefix) && $route_prefix === 'coordinador_comunidades.' 
+       ? 'coordinador_comunidades.alumnos_comunidad.index' 
+       : ($route_prefix ?? 'secretaria.') . 'alumnos_comunidades.index';
+@endphp
 
 @section('title', 'Reporte por Comunidad - Secretaría')
 @section('header_title', 'Reporte de Alumnos por Comunidad')
@@ -149,7 +155,7 @@
         </div>
 
         <div class="card-body border-bottom filter-card">
-            <form method="GET" action="{{ route('secretaria.alumnos_comunidades.index') }}" class="row g-3 align-items-end">
+            <form method="GET" action="{{ route($route_name) }}" class="row g-3 align-items-end">
 
                 <div class="col-md-3">
                     <label class="form-label">Comunidad</label>
@@ -195,7 +201,7 @@
                             Buscar
                         </button>
 
-                        <a href="{{ route('secretaria.alumnos_comunidades.index') }}"
+                        <a href="{{ route($route_name) }}"
                            class="btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center"
                            style="height: 46px;">
                             <i class="bi bi-x-circle me-1"></i>

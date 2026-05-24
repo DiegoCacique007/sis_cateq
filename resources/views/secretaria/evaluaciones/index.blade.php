@@ -1,29 +1,30 @@
-@extends('layouts.app_parroquia_admin')
+@extends($layout_role ?? 'layouts.app_parroquia_admin')
+
+@php
+    $route_name = ($route_prefix ?? 'secretaria.') . 'evaluaciones.index';
+@endphp
 
 @section('title', 'Evaluaciones por Grupo - Secretaría')
 @section('header_title', 'Evaluaciones por Grupo')
 
 @section('content')
-    @php
         $periodoSeleccionado = $periodos->firstWhere('id', (int) $periodoId);
         $grupoSeleccionado = $grupos->firstWhere('id', (int) $grupoId);
         $unidadSeleccionada = $unidades->firstWhere('id', (int) $unidadId);
-        $rubroSeleccionado = $rubros->firstWhere('id', (int) $rubroId);
-    @endphp
 
     <div class="card card-parroquia module-card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3">
             <div>
                 <h5 class="fw-bold mb-0 module-title">Captura guiada de evaluaciones</h5>
                 <small class="text-muted">
-                    Selecciona el periodo, grupo, unidad y rubro. Después se mostrarán únicamente los alumnos correspondientes.
+                    Selecciona el periodo, grupo y unidad. Después se mostrarán los alumnos para capturar todas sus calificaciones de esta unidad.
                 </small>
             </div>
         </div>
 
         <div class="card-body">
-            <form method="GET" action="{{ route('secretaria.evaluaciones.index') }}" class="row g-3">
-                <div class="col-md-6 col-xl-3">
+            <form method="GET" action="{{ route($route_name) }}" class="row g-3">
+                <div class="col-md-4">
                     <label class="form-label">Periodo</label>
                     <select name="periodo_id" class="form-select" required>
                         <option value="">Selecciona un periodo</option>
@@ -35,7 +36,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-4">
                     <label class="form-label">Grupo</label>
                     <select name="grupo_id" class="form-select" required>
                         <option value="">Selecciona un grupo</option>
@@ -47,7 +48,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-4">
                     <label class="form-label">Unidad</label>
                     <select name="unidad_id" class="form-select" required>
                         <option value="">Selecciona una unidad</option>
@@ -59,20 +60,8 @@
                     </select>
                 </div>
 
-                <div class="col-md-6 col-xl-3">
-                    <label class="form-label">Rubro</label>
-                    <select name="rubro_id" class="form-select" required>
-                        <option value="">Selecciona un rubro</option>
-                        @foreach($rubros as $rubro)
-                            <option value="{{ $rubro->id }}" {{ (string) $rubroId === (string) $rubro->id ? 'selected' : '' }}>
-                                {{ $rubro->nombre }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
                 <div class="col-12 d-flex flex-column flex-md-row justify-content-end gap-2 mt-2">
-                    <a href="{{ route('secretaria.evaluaciones.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                    <a href="{{ route($route_name) }}" class="btn btn-outline-secondary rounded-pill px-4">
                         <i class="bi bi-arrow-counterclockwise me-1"></i>
                         Limpiar
                     </a>
@@ -88,7 +77,7 @@
 
     @if($contextoCompleto)
         <div class="row g-3 mb-4">
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-4">
                 <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
                     <div class="card-body">
                         <span class="cell-subtitle">Periodo</span>
@@ -97,7 +86,7 @@
                 </div>
             </div>
 
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-4">
                 <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
                     <div class="card-body">
                         <span class="cell-subtitle">Grupo</span>
@@ -106,24 +95,11 @@
                 </div>
             </div>
 
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-4">
                 <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
                     <div class="card-body">
                         <span class="cell-subtitle">Unidad</span>
                         <span class="cell-title">{{ $unidadSeleccionada->text ?? 'No seleccionada' }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 col-xl-3">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
-                    <div class="card-body">
-                        <span class="cell-subtitle">Rubro</span>
-                        <span class="cell-title">{{ $rubroSeleccionado->nombre ?? 'No seleccionado' }}</span>
-
-                        @if($rubroSeleccionado)
-                            <span class="cell-subtitle mt-1">Valor: {{ number_format($rubroSeleccionado->valor, 2) }}</span>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -154,16 +130,16 @@
                     <input type="hidden" name="periodo_id" value="{{ $periodoId }}">
                     <input type="hidden" name="grupo_id" value="{{ $grupoId }}">
                     <input type="hidden" name="unidad_id" value="{{ $unidadId }}">
-                    <input type="hidden" name="rubro_id" value="{{ $rubroId }}">
 
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead>
                             <tr>
-                                <th style="width: 70px;">#</th>
+                                <th style="width: 50px;">#</th>
                                 <th>Alumno</th>
-                                <th class="text-center" style="width: 220px;">Calificación</th>
-                                <th class="text-center" style="width: 170px;">Estado</th>
+                                @foreach($rubros as $rubro)
+                                    <th class="text-center" style="width: 130px;" title="Valor: {{ $rubro->valor }}%">{{ $rubro->nombre }}</th>
+                                @endforeach
                             </tr>
                             </thead>
 
@@ -177,31 +153,28 @@
                                         <span class="cell-subtitle">Alumno del grupo seleccionado</span>
                                     </td>
 
-                                    <td class="text-center">
-                                        <input
-                                            type="number"
-                                            name="calificaciones[{{ $alumno->inscripcion_id }}]"
-                                            value="{{ old('calificaciones.' . $alumno->inscripcion_id, $alumno->calificacion) }}"
-                                            class="form-control mx-auto text-center fw-bold"
-                                            style="max-width: 140px;"
-                                            min="0"
-                                            max="100"
-                                            step="0.1"
-                                            placeholder="0 - 100"
-                                        >
-                                    </td>
-
-                                    <td class="text-center">
-                                        @if($alumno->evaluacion_id)
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2">
-                                                Registrada
-                                            </span>
-                                        @else
-                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-2">
-                                                Pendiente
-                                            </span>
-                                        @endif
-                                    </td>
+                                    @foreach($rubros as $rubro)
+                                        @php
+                                            $calificacion = $calificacionesMap[$alumno->inscripcion_id][$rubro->id]->calificacion ?? null;
+                                        @endphp
+                                        <td class="text-center">
+                                            @if(auth()->check() && auth()->user()->role === 'secretaria')
+                                                <input
+                                                    type="number"
+                                                    name="calificaciones[{{ $alumno->inscripcion_id }}][{{ $rubro->id }}]"
+                                                    value="{{ old('calificaciones.' . $alumno->inscripcion_id . '.' . $rubro->id, $calificacion) }}"
+                                                    class="form-control mx-auto text-center fw-bold"
+                                                    style="max-width: 90px; padding: 4px;"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.1"
+                                                    placeholder="-"
+                                                >
+                                            @else
+                                                <span class="fw-bold fs-6">{{ $calificacion !== null ? $calificacion : '-' }}</span>
+                                            @endif
+                                        </td>
+                                    @endforeach
                                 </tr>
                             @endforeach
                             </tbody>
@@ -209,6 +182,7 @@
                     </div>
 
                     <div class="card-footer bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        @if(auth()->check() && auth()->user()->role === 'secretaria')
                         <small class="text-muted">
                             Revisa las calificaciones antes de guardar. Los valores deben estar entre 0 y 100.
                         </small>
@@ -217,6 +191,11 @@
                             <i class="bi bi-save me-1"></i>
                             Guardar evaluaciones
                         </button>
+                        @else
+                        <small class="text-muted">
+                            Vista de sólo lectura.
+                        </small>
+                        @endif
                     </div>
                 </form>
             @else
@@ -237,7 +216,7 @@
                 <i class="bi bi-funnel fs-1 text-primary d-block mb-3"></i>
                 <h5 class="fw-bold module-title">Selecciona los filtros para iniciar</h5>
                 <p class="text-muted mb-0">
-                    Para capturar evaluaciones, primero selecciona periodo, grupo, unidad y rubro.
+                    Para capturar evaluaciones, primero selecciona periodo, grupo y unidad.
                 </p>
             </div>
         </div>

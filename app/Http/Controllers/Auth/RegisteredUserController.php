@@ -29,6 +29,9 @@ class RegisteredUserController extends Controller
         $map = [
             'catequista' => 'catequista',
             'secretaria' => 'secretaria',
+            'parroco' => 'parroco',
+            'coordinador_general' => 'coordinador_general',
+            'coordinador_comunidades' => 'coordinador_comunidades',
 
             'secretaría' => 'secretaria',
 
@@ -73,6 +76,9 @@ class RegisteredUserController extends Controller
         $rolesPermitidos = [
             'catequista',
             'secretaria',
+            'parroco',
+            'coordinador_general',
+            'coordinador_comunidades',
         ];
 
         if (!$normalizedRequestedRole || !in_array($normalizedRequestedRole, $rolesPermitidos, true)) {

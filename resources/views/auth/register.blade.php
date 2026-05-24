@@ -430,6 +430,15 @@
                         <option value="" disabled {{ old('requested_role') ? '' : 'selected' }}>
                             Selecciona el perfil solicitado...
                         </option>
+                        <option value="parroco" {{ old('requested_role') == 'parroco' ? 'selected' : '' }}>
+                            Párroco
+                        </option>
+                        <option value="coordinador_general" {{ old('requested_role') == 'coordinador_general' ? 'selected' : '' }}>
+                            Coordinador General
+                        </option>
+                        <option value="coordinador_comunidades" {{ old('requested_role') == 'coordinador_comunidades' ? 'selected' : '' }}>
+                            Coordinador de Comunidades
+                        </option>
                         <option value="catequista" {{ old('requested_role') == 'catequista' ? 'selected' : '' }}>
                             Catequista
                         </option>

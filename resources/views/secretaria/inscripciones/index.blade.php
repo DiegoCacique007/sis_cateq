@@ -1,4 +1,4 @@
-@extends('layouts.app_parroquia_admin')
+@extends($layout_role ?? 'layouts.app_parroquia_admin')
 
 @section('title', 'Inscripciones - Secretaría')
 @section('header_title', 'Gestión de Inscripciones')
@@ -152,13 +152,15 @@
                 <small class="text-muted">Administración de alumnos inscritos en grupos y periodos.</small>
             </div>
 
+            @if(auth()->check() && auth()->user()->role === 'secretaria')
             <button class="btn btn-parroquia rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalCrear">
                 <i class="bi bi-plus-lg me-1"></i> Nueva inscripción
             </button>
+            @endif
         </div>
 
         <div class="card-body border-bottom">
-            <form method="GET" action="{{ route('secretaria.inscripciones.index') }}" class="row g-2 align-items-center">
+            <form method="GET" action="{{ route(($route_prefix ?? 'secretaria.') . 'inscripciones.index') }}" class="row g-2 align-items-center">
                 <div class="col-md-8">
                     <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Buscar por alumno, grupo o periodo...">
                 </div>
@@ -183,6 +185,7 @@
         <div class="inscripciones-grid">
             @forelse($registros as $registro)
                 <div class="inscripcion-card">
+                    @if(auth()->check() && auth()->user()->role === 'secretaria')
                     <div class="card-actions">
                         <button type="button" class="btn-circle btn-edit" data-bs-toggle="modal" data-bs-target="#modalEditar{{ $registro->id }}" title="Editar">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
@@ -204,6 +207,7 @@
                             </button>
                         </form>
                     </div>
+                    @endif
 
                     <div class="card-header-content">
                         <h4 class="student-name">
@@ -248,6 +252,7 @@
         </div>
     </div>
 
+    @if(auth()->check() && auth()->user()->role === 'secretaria')
     <div class="modal fade" id="modalCrear" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
@@ -350,4 +355,5 @@
             </div>
         </div>
     @endforeach
+    @endif
 @endsection

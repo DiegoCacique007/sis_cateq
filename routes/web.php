@@ -24,6 +24,15 @@ use App\Http\Controllers\Catequista\CatequistaController;
 use App\Http\Controllers\Catequista\EvaluacionController as CatequistaEvaluacionController;
 use App\Http\Controllers\Catequista\MiGrupoController;
 
+// Párroco
+use App\Http\Controllers\Parroco\ParrocoController;
+
+// Coordinador General
+use App\Http\Controllers\CoordGeneral\CoordGeneralController;
+
+// Coordinador de Comunidades
+use App\Http\Controllers\CoordComunidad\CoordComunidadController;
+
 
 
 Route::view('/', 'welcome')->name('welcome');
@@ -49,6 +58,17 @@ Route::middleware(['auth', \App\Http\Middleware\NoCacheHeaders::class])->get('/d
         return redirect()->route('catequista.dashboard');
     }
 
+    if ($user->role === 'parroco') {
+        return redirect()->route('parroco.dashboard');
+    }
+
+    if ($user->role === 'coordinador_general') {
+        return redirect()->route('coordinador_general.dashboard');
+    }
+
+    if ($user->role === 'coordinador_comunidades') {
+        return redirect()->route('coordinador_comunidades.dashboard');
+    }
 
     return redirect()->route('welcome');
 })->name('dashboard');
@@ -78,14 +98,7 @@ Route::middleware(['auth', 'role:secretaria', \App\Http\Middleware\NoCacheHeader
     Route::post('/evaluaciones/guardar-masivo', [EvaluacionController::class, 'guardarMasivo'])->name('evaluaciones.guardarMasivo');
     Route::delete('/evaluaciones/{evaluacion}', [EvaluacionController::class, 'destroy'])->name('evaluaciones.destroy');
 
-    // ── Módulo de Emisión de Documentos (Solo Admin/Secretaria) ──
-    Route::prefix('documentos')->name('documentos.')->group(function () {
-        Route::get('/', [DocumentoController::class, 'index'])->name('index');
-        Route::post('/boletas', [DocumentoController::class, 'boletas'])->name('boletas');
-        Route::post('/certificado-primera-comunion', [DocumentoController::class, 'certificadoPrimeraComunion'])->name('certificado.primera_comunion');
-        Route::post('/certificado-confirmacion', [DocumentoController::class, 'certificadoConfirmacion'])->name('certificado.confirmacion');
-        Route::get('/buscar-alumnos', [DocumentoController::class, 'buscarAlumnos'])->name('buscar_alumnos');
-    });
+
 
     // ── Módulo de Boletas ──
     Route::prefix('boletas')->name('boletas.')->group(function () {
@@ -110,8 +123,57 @@ Route::middleware(['auth', 'role:catequista', \App\Http\Middleware\NoCacheHeader
         Route::post('/evaluaciones/guardar', [CatequistaEvaluacionController::class, 'guardar'])->name('evaluaciones.guardar');
     });
 
+// ==========================================
+// PÁRROCO - SUPERVISIÓN GENERAL (Solo lectura)
+// ==========================================
+Route::middleware(['auth', 'role:parroco', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+    ->prefix('parroco')
+    ->name('parroco.')
+    ->group(function () {
+        Route::get('/dashboard', [ParrocoController::class, 'index'])->name('dashboard');
+        Route::get('/comunidades', [ComunidadController::class, 'index'])->name('comunidades.index');
+        Route::get('/alumnos', [AlumnoController::class, 'index'])->name('alumnos.index');
+        Route::get('/catequistas', [ParrocoController::class, 'catequistas'])->name('catequistas.index');
+        Route::get('/grupos', [GrupoController::class, 'index'])->name('grupos.index');
+        Route::get('/evaluaciones', [ParrocoController::class, 'evaluaciones'])->name('evaluaciones.index');
+        Route::get('/boletas', [BoletaController::class, 'index'])->name('boletas.index');
+        Route::get('/boletas/generar/{inscripcion}', [BoletaController::class, 'generar'])->name('boletas.generar');
+    });
 
+// ==========================================
+// COORDINADOR GENERAL - SUPERVISIÓN ACADÉMICA/PASTORAL
+// ==========================================
+Route::middleware(['auth', 'role:coordinador_general', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+    ->prefix('coordinador-general')
+    ->name('coordinador_general.')
+    ->group(function () {
+        Route::get('/dashboard', [CoordGeneralController::class, 'index'])->name('dashboard');
+        Route::get('/comunidades', [ComunidadController::class, 'index'])->name('comunidades.index');
+        Route::get('/alumnos', [AlumnoController::class, 'index'])->name('alumnos.index');
+        Route::get('/tutores', [TutorController::class, 'index'])->name('tutores.index');
+        Route::get('/inscripciones', [InscripcionController::class, 'index'])->name('inscripciones.index');
+        Route::get('/grupos', [GrupoController::class, 'index'])->name('grupos.index');
+        Route::get('/niveles', [NivelController::class, 'index'])->name('niveles.index');
+        Route::get('/evaluaciones', [CoordGeneralController::class, 'evaluaciones'])->name('evaluaciones.index');
+        Route::get('/boletas', [BoletaController::class, 'index'])->name('boletas.index');
+        Route::get('/boletas/generar/{inscripcion}', [BoletaController::class, 'generar'])->name('boletas.generar');
+    });
 
-
+// ==========================================
+// COORDINADOR DE COMUNIDADES - SUPERVISIÓN POR COMUNIDAD
+// ==========================================
+Route::middleware(['auth', 'role:coordinador_comunidades', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+    ->prefix('coordinador-comunidades')
+    ->name('coordinador_comunidades.')
+    ->group(function () {
+        Route::get('/dashboard', [CoordComunidadController::class, 'index'])->name('dashboard');
+        Route::get('/comunidades', [ComunidadController::class, 'index'])->name('comunidades.index');
+        Route::get('/alumnos-comunidad', [AlumnoComunidadController::class, 'index'])->name('alumnos_comunidad.index');
+        Route::get('/grupos', [GrupoController::class, 'index'])->name('grupos.index');
+        Route::get('/catequistas', [CoordComunidadController::class, 'catequistas'])->name('catequistas.index');
+        Route::get('/evaluaciones', [CoordComunidadController::class, 'evaluaciones'])->name('evaluaciones.index');
+        Route::get('/boletas', [BoletaController::class, 'index'])->name('boletas.index');
+        Route::get('/boletas/generar/{inscripcion}', [BoletaController::class, 'generar'])->name('boletas.generar');
+    });
 
 require __DIR__ . '/auth.php';

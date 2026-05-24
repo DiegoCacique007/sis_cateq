@@ -28,7 +28,7 @@ class AsegurarPeriodoActivo
         }
 
         // Compartir periodos con todas las vistas que necesiten el modal de periodo
-        if (auth()->check() && in_array(auth()->user()->role, ['secretaria', 'catequista', 'coord_comunidad', 'coord_general', 'parroco'])) {
+        if (auth()->check() && in_array(auth()->user()->role, ['secretaria', 'catequista', 'coordinador_comunidades', 'coordinador_general', 'parroco'])) {
             $periodosGlobales = DB::table('periodos')
                 ->whereNull('deleted_at')
                 ->orderBy('fecha_inicio', 'desc')

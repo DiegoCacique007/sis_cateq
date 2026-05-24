@@ -599,10 +599,9 @@
 
         @auth
             <div class="mt-3 pt-3" style="border-top:1px solid rgba(255, 255, 255, 0.25);">
-                <form method="POST" action="{{ route('logout') }}">
+                <form id="logout-form" method="POST" action="{{ route('logout') }}">
                     @csrf
-
-                    <button class="btn btn-outline-parroquia btn-sm w-100" type="submit">
+                    <button class="btn btn-outline-parroquia btn-sm w-100" type="button" onclick="window.AppAlert.confirmLogout().then(r => { if(r.isConfirmed) document.getElementById('logout-form').submit(); })">
                         <i class="bi bi-box-arrow-right me-1"></i>
                         Salir
                     </button>
@@ -692,16 +691,15 @@
         success(message = 'Operación realizada correctamente.') {
             if (window.Swal) {
                 return Swal.fire({
-                    toast: true,
-                    position: 'top-end',
+                    position: 'center',
                     icon: 'success',
                     title: 'Correcto',
                     text: message,
                     timer: 2600,
                     timerProgressBar: true,
                     showConfirmButton: false,
-                    width: '320px',
-                    customClass: { popup: 'small-formal-toast' }
+                    width: '360px',
+                    customClass: { popup: 'small-formal-confirm' }
                 });
             }
 
@@ -712,16 +710,15 @@
         error(message = 'Ocurrió un error inesperado.', title = 'Error') {
             if (window.Swal) {
                 return Swal.fire({
-                    toast: true,
-                    position: 'top-end',
+                    position: 'center',
                     icon: 'error',
                     title: title,
                     text: message,
                     timer: 3400,
                     timerProgressBar: true,
                     showConfirmButton: false,
-                    width: '330px',
-                    customClass: { popup: 'small-formal-toast' }
+                    width: '360px',
+                    customClass: { popup: 'small-formal-confirm' }
                 });
             }
 
@@ -742,8 +739,7 @@
 
             if (window.Swal) {
                 return Swal.fire({
-                    toast: true,
-                    position: 'top-end',
+                    position: 'center',
                     icon: 'warning',
                     title: 'Validación requerida',
                     html: html,
@@ -751,7 +747,7 @@
                     timerProgressBar: true,
                     showConfirmButton: false,
                     width: '360px',
-                    customClass: { popup: 'small-formal-toast' }
+                    customClass: { popup: 'small-formal-confirm' }
                 });
             }
 
@@ -797,6 +793,26 @@
             }
 
             return Promise.resolve({ isConfirmed: confirm(message) });
+        },
+
+        confirmLogout() {
+            if (window.Swal) {
+                return Swal.fire({
+                    icon: 'warning',
+                    title: '¿Cerrar sesión?',
+                    text: '¿Está seguro que desea salir del sistema?',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, salir',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    reverseButtons: true,
+                    width: '360px',
+                    customClass: { popup: 'small-formal-confirm' }
+                });
+            }
+
+            return Promise.resolve({ isConfirmed: confirm('¿Está seguro que desea salir del sistema?') });
         }
     };
 
