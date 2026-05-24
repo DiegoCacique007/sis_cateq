@@ -16,14 +16,19 @@
 
     <style>
         :root {
-            --blue-main: #4facfe;
-            --blue-light: #8fd3f4;
+            --blue-light: #4facfe;
+            --blue-main: #2f7fd3;
             --blue-dark: #1e3a8a;
+            --blue-deep: #163172;
+
+            --sidebar-gradient: linear-gradient(180deg, #4facfe 0%, #2f7fd3 42%, #1e3a8a 100%);
+            --sidebar-gradient-soft: linear-gradient(90deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.10));
+            --button-gradient: linear-gradient(90deg, #4facfe 0%, #2f7fd3 55%, #1e3a8a 100%);
+
             --text-main: #2c3e50;
             --muted: rgba(44, 62, 80, 0.65);
-            --panel: rgba(255, 255, 255, 0.92);
+            --panel: rgba(255, 255, 255, 0.94);
             --border: rgba(79, 172, 254, 0.22);
-            --sidebar: rgba(255, 255, 255, 0.97);
             --bg-soft: #f8fbff;
         }
 
@@ -49,24 +54,33 @@
 
         .sidebar {
             width: 300px;
-            background: var(--sidebar);
-            border-right: 1px solid var(--border);
-            border-left: 4px solid var(--blue-main);
+            background: var(--sidebar-gradient);
+            border-right: 0;
+            border-left: 0;
             padding: 22px 16px;
-            backdrop-filter: blur(10px);
             position: sticky;
             top: 0;
             height: 100vh;
             overflow-y: auto;
+            box-shadow: 10px 0 30px rgba(30, 58, 138, 0.22);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 999px;
         }
 
         .brand {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 10px 10px 18px 10px;
-            border-bottom: 1px solid rgba(30, 58, 138, 0.08);
-            margin-bottom: 14px;
+            padding: 12px 10px 18px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+            margin-bottom: 16px;
         }
 
         .logo {
@@ -74,10 +88,10 @@
             place-items: center;
             width: 46px;
             height: 46px;
-            border: 1px solid rgba(79, 172, 254, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.70);
             border-radius: 50%;
-            color: var(--blue-main);
-            box-shadow: 0 0 22px rgba(79, 172, 254, 0.15);
+            color: var(--blue-dark);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
             background: #ffffff;
             flex: 0 0 auto;
         }
@@ -85,52 +99,67 @@
         .brand-title {
             margin: 0;
             font-family: 'Cinzel', serif;
-            color: var(--blue-dark);
+            color: #ffffff;
             letter-spacing: 1.6px;
             font-weight: 700;
             text-transform: uppercase;
             font-size: 1.02rem;
             line-height: 1.1;
+            text-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
         }
 
         .brand-sub {
             margin: 0;
-            color: var(--muted);
+            color: rgba(255, 255, 255, 0.82);
             font-size: .86rem;
         }
 
         .nav-parroquia .nav-link,
         .menu-toggle {
-            color: var(--text-main);
-            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.92);
+            border-radius: 14px;
             padding: 10px 12px;
-            margin-bottom: 6px;
-            border: 1px solid transparent;
-            background: transparent;
+            margin-bottom: 7px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
             gap: 10px;
             transition: all .2s ease;
             cursor: pointer;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
             width: 100%;
             text-align: left;
+            backdrop-filter: blur(6px);
+        }
+
+        .nav-parroquia .nav-link i,
+        .menu-toggle i {
+            color: rgba(255, 255, 255, 0.95);
         }
 
         .nav-parroquia .nav-link:hover,
         .menu-toggle:hover {
-            color: var(--blue-dark);
-            background: rgba(79, 172, 254, 0.1);
-            border-color: var(--border);
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.20);
+            border-color: rgba(255, 255, 255, 0.38);
+            transform: translateX(3px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
         }
 
         .nav-parroquia .nav-link.active,
         .menu-toggle.active {
-            background: rgba(79, 172, 254, 0.15);
-            border-color: rgba(79, 172, 254, 0.35);
+            background: #ffffff;
+            border-color: #ffffff;
             color: var(--blue-dark);
-            font-weight: 700;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.20);
+        }
+
+        .nav-parroquia .nav-link.active i,
+        .menu-toggle.active i {
+            color: var(--blue-main) !important;
         }
 
         .menu-toggle .chevron {
@@ -144,21 +173,45 @@
         }
 
         .submenu {
-            padding-left: 10px;
-            margin-bottom: 8px;
-            border-left: 2px solid rgba(79, 172, 254, 0.22);
+            padding: 8px 0 4px 10px;
+            margin-bottom: 10px;
             margin-left: 14px;
+            border-left: 2px solid rgba(255, 255, 255, 0.36);
         }
 
         .submenu .nav-link {
             padding: 9px 10px;
             font-size: .92rem;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .submenu .nav-link:hover {
+            background: rgba(255, 255, 255, 0.24);
+        }
+
+        .submenu .nav-link.active {
+            background: #ffffff;
+            color: var(--blue-dark);
+            border-color: #ffffff;
         }
 
         .nav-parroquia .nav-link.disabled-link {
             opacity: .65;
             cursor: not-allowed;
+        }
+
+        .sidebar form .btn-outline-parroquia {
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.10);
+        }
+
+        .sidebar form .btn-outline-parroquia:hover {
+            color: var(--blue-dark);
+            background: #ffffff;
+            border-color: #ffffff;
         }
 
         .main {
@@ -203,7 +256,7 @@
         }
 
         .btn-parroquia {
-            background: linear-gradient(180deg, var(--blue-light) 0%, var(--blue-main) 100%);
+            background: var(--button-gradient);
             color: #ffffff;
             border: 0;
             border-radius: 10px;
@@ -407,7 +460,7 @@
                         <div class="submenu">
                             <a class="nav-link {{ request()->routeIs('catequista.mi_grupo') ? 'active' : '' }}"
                                href="{{ route('catequista.mi_grupo') }}">
-                                <i class="bi bi-people text-primary"></i>
+                                <i class="bi bi-people"></i>
                                 <span>Lista de Grupo</span>
                             </a>
                         </div>
@@ -428,7 +481,7 @@
                         <div class="submenu">
                             <a class="nav-link {{ request()->routeIs('catequista.evaluaciones.*') ? 'active' : '' }}"
                                href="{{ route('catequista.evaluaciones.index') }}">
-                                <i class="bi bi-calculator text-success"></i>
+                                <i class="bi bi-calculator"></i>
                                 <span>Captura de Calificaciones</span>
                             </a>
                         </div>
@@ -450,7 +503,7 @@
         </nav>
 
         @auth
-            <div class="mt-3 pt-3" style="border-top:1px solid rgba(30, 58, 138, 0.08);">
+            <div class="mt-3 pt-3" style="border-top:1px solid rgba(255, 255, 255, 0.25);">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
 

@@ -338,13 +338,13 @@
                     </div>
                 </div>
 
-                <a href="https://wa.me/527291317536" target="_blank" class="contact-item">
+                <a href="https://wa.me/527262513256" target="_blank" class="contact-item">
                     <div class="icon-wrapper">
                         <div class="contact-icon"><i class="bi bi-whatsapp"></i></div>
                     </div>
                     <div>
                         <div class="contact-label">Atención y Soporte (WhatsApp)</div>
-                        <div>(729) 131 7536 <span style="font-size: 0.8rem; color: var(--blue-soft); margin-left: 5px;">¡Escríbenos!</span></div>
+                        <div>(726) 251 3256 <span style="font-size: 0.8rem; color: var(--blue-soft); margin-left: 5px;">¡Escríbenos!</span></div>
                     </div>
                 </a>
 
@@ -354,7 +354,7 @@
                     </div>
                     <div>
                         <div class="contact-label">Horario de Servicio</div>
-                        <div>Lunes a Viernes — Matutino y Vespertino</div>
+                        <div>Siempre abierto</div>
                     </div>
                 </div>
             </div>

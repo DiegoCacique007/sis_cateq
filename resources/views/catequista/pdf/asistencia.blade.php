@@ -38,6 +38,8 @@
             display: table;
             width: 100%;
             margin-bottom: 6px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #B98535;
         }
 
         .header-logo,
@@ -49,6 +51,20 @@
         .header-logo {
             width: 74px;
             text-align: center;
+        }
+
+        .header-logo-box {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .header-logo-box img {
+            width: 64px;
+            height: 64px;
+            max-width: 64px;
+            max-height: 64px;
         }
 
         .logo-placeholder {
@@ -247,10 +263,40 @@
 </head>
 
 <body>
+@php
+    $logoArquidiocesisPath = public_path('logos/logo_arquidiocesis.png');
+    $logoAsuncionPath = public_path('logos/logo_asuncion_de_maria.png');
+
+    $convertirLogoBase64 = function ($path) {
+        if (!file_exists($path)) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        $mime = match ($extension) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            default => 'image/png',
+        };
+
+        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+    };
+
+    $logoArquidiocesis = $convertirLogoBase64($logoArquidiocesisPath);
+    $logoAsuncion = $convertirLogoBase64($logoAsuncionPath);
+@endphp
 
 <div class="header">
     <div class="header-logo">
-        <div class="logo-placeholder">ESCUDO</div>
+        <div class="header-logo-box">
+            @if($logoArquidiocesis)
+                <img src="{!! $logoArquidiocesis !!}" alt="Logo Arquidiócesis">
+            @else
+                <div class="logo-placeholder">ESCUDO</div>
+            @endif
+        </div>
     </div>
 
     <div class="header-center">
@@ -261,7 +307,13 @@
     </div>
 
     <div class="header-logo">
-        <div class="logo-placeholder">VIRGEN</div>
+        <div class="header-logo-box">
+            @if($logoAsuncion)
+                <img src="{!! $logoAsuncion !!}" alt="Logo Parroquia La Asunción de María">
+            @else
+                <div class="logo-placeholder">VIRGEN</div>
+            @endif
+        </div>
     </div>
 </div>
 
@@ -321,9 +373,7 @@
             </td>
 
             @for($i = 1; $i <= 15; $i++)
-                <td class="col-asistencia">
-
-                </td>
+                <td class="col-asistencia"></td>
             @endfor
         </tr>
     @empty
