@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Secretaria;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Secretaria\Alumno;
 use App\Models\Secretaria\Comunidad;
 use App\Models\Secretaria\Nivel;
@@ -18,8 +19,35 @@ class AlumnoComunidadController extends Controller
             'comunidad',
             'inscripciones' => function ($q) use ($periodoActivoId) {
                 $q->where('periodo_id', $periodoActivoId)
-                    ->where('estado', 1)
-                    ->with('asignaGrupo.nivel');
+                    ->addSelect('inscripciones.*')
+                    ->addSelect([
+                        'nivel_nombre' => DB::table('asigna_grupo')
+                            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
+                            ->select('niveles.nivel')
+                            ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
+                            ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
+                            ->whereNull('asigna_grupo.deleted_at')
+                            ->whereNull('niveles.deleted_at')
+                            ->limit(1),
+
+                        'nivel_numero' => DB::table('asigna_grupo')
+                            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
+                            ->select('niveles.numero')
+                            ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
+                            ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
+                            ->whereNull('asigna_grupo.deleted_at')
+                            ->whereNull('niveles.deleted_at')
+                            ->limit(1),
+
+                        'sacramento_nombre' => DB::table('asigna_grupo')
+                            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
+                            ->select('niveles.sacramento')
+                            ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
+                            ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
+                            ->whereNull('asigna_grupo.deleted_at')
+                            ->whereNull('niveles.deleted_at')
+                            ->limit(1),
+                    ]);
             }
         ]);
 
@@ -28,23 +56,33 @@ class AlumnoComunidadController extends Controller
         }
 
         $query->whereHas('inscripciones', function ($q) use ($request, $periodoActivoId) {
-            $q->where('periodo_id', $periodoActivoId)
-                ->where('estado', 1);
+            $q->where('periodo_id', $periodoActivoId);
 
             if ($request->filled('sacramento') || $request->filled('numero_nivel')) {
-                $q->whereHas('asignaGrupo.nivel', function ($qNivel) use ($request) {
+                $q->whereExists(function ($subquery) use ($request) {
+                    $subquery
+                        ->select(DB::raw(1))
+                        ->from('asigna_grupo')
+                        ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
+                        ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
+                        ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
+                        ->whereNull('asigna_grupo.deleted_at')
+                        ->whereNull('niveles.deleted_at');
+
                     if ($request->filled('sacramento')) {
-                        $qNivel->where('sacramento', $request->sacramento);
+                        $subquery->where('niveles.sacramento', $request->sacramento);
                     }
 
                     if ($request->filled('numero_nivel')) {
-                        $qNivel->where('numero', $request->numero_nivel);
+                        $subquery->where('niveles.numero', $request->numero_nivel);
                     }
                 });
             }
         });
 
-        $registros = $query->paginate(15)->withQueryString();
+        $registros = $query
+            ->paginate(15)
+            ->withQueryString();
 
         $comunidades = Comunidad::orderBy('comunidad')->get();
 

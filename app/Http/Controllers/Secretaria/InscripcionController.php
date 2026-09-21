@@ -19,17 +19,17 @@ class InscripcionController extends Controller
             $perPage = 25;
         }
 
+        $periodoActivoId = session('periodo_activo_id');
+
         $registros = Inscripcion::query()
             ->leftJoin('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
-            ->leftJoin('periodos', 'inscripciones.periodo_id', '=', 'periodos.id')
             ->leftJoin('grupos', 'inscripciones.grupo_id', '=', 'grupos.id')
             ->select(
                 'inscripciones.*',
                 DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre"),
-                'alumnos.fecha_nacimiento',
                 'grupos.nombre as grupo_nombre'
             )
-            ->where('inscripciones.periodo_id', session('periodo_activo_id'))
+            ->where('inscripciones.periodo_id', $periodoActivoId)
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('alumnos.nombre', 'LIKE', "%{$search}%")
@@ -43,7 +43,8 @@ class InscripcionController extends Controller
             })
             ->orderBy('alumnos.nombre')
             ->orderBy('alumnos.apellido_paterno')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
 
         $alumnos = DB::table('alumnos')
             ->whereNull('deleted_at')
@@ -76,15 +77,24 @@ class InscripcionController extends Controller
 
     public function store(Request $request)
     {
+        $periodoActivoId = session('periodo_activo_id');
+
         $validated = $request->validate([
-            'alumno_id' => ['required', 'exists:alumnos,id'],
+            'alumno_id' => [
+                'required',
+                'exists:alumnos,id'
+            ],
+
             'grupo_id' => [
                 'required',
                 'exists:grupos,id',
                 Rule::unique('inscripciones', 'grupo_id')
-                    ->where('alumno_id', $request->alumno_id)
-                    ->where('periodo_id', session('periodo_activo_id'))
-                    ->whereNull('deleted_at'),
+                    ->where(function ($query) use ($request, $periodoActivoId) {
+                        return $query
+                            ->where('alumno_id', $request->alumno_id)
+                            ->where('periodo_id', $periodoActivoId)
+                            ->whereNull('deleted_at');
+                    }),
             ],
         ], [
             'alumno_id.required' => 'Selecciona un alumno.',
@@ -94,10 +104,7 @@ class InscripcionController extends Controller
             'grupo_id.unique' => 'Este alumno ya está inscrito en este grupo y periodo.',
         ]);
 
-        $validated['periodo_id'] = session('periodo_activo_id');
-
-        // Toda inscripción nueva se registra como Alta automáticamente.
-        $validated['estado'] = 1;
+        $validated['periodo_id'] = $periodoActivoId;
 
         Inscripcion::create($validated);
 
@@ -108,32 +115,37 @@ class InscripcionController extends Controller
 
     public function update(Request $request, $id)
     {
+        $periodoActivoId = session('periodo_activo_id');
+
         $inscripcion = Inscripcion::findOrFail($id);
 
         $validated = $request->validate([
-            'alumno_id' => ['required', 'exists:alumnos,id'],
+            'alumno_id' => [
+                'required',
+                'exists:alumnos,id'
+            ],
+
             'grupo_id' => [
                 'required',
                 'exists:grupos,id',
                 Rule::unique('inscripciones', 'grupo_id')
-                    ->where('alumno_id', $request->alumno_id)
-                    ->where('periodo_id', session('periodo_activo_id'))
-                    ->whereNull('deleted_at')
+                    ->where(function ($query) use ($request, $periodoActivoId) {
+                        return $query
+                            ->where('alumno_id', $request->alumno_id)
+                            ->where('periodo_id', $periodoActivoId)
+                            ->whereNull('deleted_at');
+                    })
                     ->ignore($inscripcion->id),
             ],
-            'estado' => ['required', 'integer', 'in:0,1'],
         ], [
             'alumno_id.required' => 'Selecciona un alumno.',
             'alumno_id.exists' => 'El alumno seleccionado no existe.',
             'grupo_id.required' => 'Selecciona un grupo.',
             'grupo_id.exists' => 'El grupo seleccionado no existe.',
             'grupo_id.unique' => 'Este alumno ya está inscrito en este grupo y periodo.',
-            'estado.required' => 'Selecciona el estado de la inscripción.',
-            'estado.integer' => 'El estado de la inscripción no es válido.',
-            'estado.in' => 'El estado de la inscripción debe ser Alta o Baja.',
         ]);
 
-        $validated['periodo_id'] = session('periodo_activo_id');
+        $validated['periodo_id'] = $periodoActivoId;
 
         $inscripcion->update($validated);
 

@@ -39,13 +39,20 @@ class MiGrupoController extends Controller
             );
 
         $asignaciones = $asignacionesQuery->get();
+
         $asignacionId = request('asignacion_id');
 
         if ($asignacionId) {
-            $asignacion = $asignaciones->firstWhere('asignacion_id', (int) $asignacionId);
+            $asignacion = $asignaciones->firstWhere(
+                'asignacion_id',
+                (int) $asignacionId
+            );
         } else {
             $asignacion = $asignaciones->first();
-            $asignacionId = $asignacion ? $asignacion->asignacion_id : null;
+
+            $asignacionId = $asignacion
+                ? $asignacion->asignacion_id
+                : null;
         }
 
         $alumnos = collect();
@@ -55,12 +62,21 @@ class MiGrupoController extends Controller
                 ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
                 ->where('inscripciones.grupo_id', $asignacion->grupo_id)
                 ->where('inscripciones.periodo_id', $asignacion->periodo_id)
-                ->where('inscripciones.estado', 1)
                 ->whereNull('inscripciones.deleted_at')
                 ->whereNull('alumnos.deleted_at')
                 ->select(
                     'alumnos.id',
-                    DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno")
+                    DB::raw("
+                        TRIM(
+                            CONCAT(
+                                alumnos.nombre,
+                                ' ',
+                                alumnos.apellido_paterno,
+                                ' ',
+                                COALESCE(alumnos.apellido_materno, '')
+                            )
+                        ) as alumno
+                    ")
                 )
                 ->groupBy(
                     'alumnos.id',
@@ -88,7 +104,8 @@ class MiGrupoController extends Controller
         $periodoActivoId = session('periodo_activo_id');
 
         if (!$periodoActivoId) {
-            return back()->with('error', 'No hay un periodo activo seleccionado.');
+            return back()
+                ->with('error', 'No hay un periodo activo seleccionado.');
         }
 
         $asignacionesQuery = DB::table('asigna_grupo')
@@ -116,35 +133,51 @@ class MiGrupoController extends Controller
             );
 
         $asignaciones = $asignacionesQuery->get();
+
         $asignacionId = request('asignacion_id');
 
         if ($asignacionId) {
-            $asignacion = $asignaciones->firstWhere('asignacion_id', (int) $asignacionId);
+            $asignacion = $asignaciones->firstWhere(
+                'asignacion_id',
+                (int) $asignacionId
+            );
         } else {
             $asignacion = $asignaciones->first();
         }
 
         if (!$asignacion) {
-            return back()->with('error', 'No tienes un grupo asignado para este periodo.');
+            return back()
+                ->with('error', 'No tienes un grupo asignado para este periodo.');
         }
 
         $alumnos = DB::table('inscripciones')
             ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
             ->where('inscripciones.grupo_id', $asignacion->grupo_id)
             ->where('inscripciones.periodo_id', $asignacion->periodo_id)
-            ->where('inscripciones.estado', 1)
             ->whereNull('inscripciones.deleted_at')
             ->whereNull('alumnos.deleted_at')
             ->select(
-                DB::raw("TRIM(CONCAT(alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''), ' ', alumnos.nombre)) as alumno")
+                DB::raw("
+                    TRIM(
+                        CONCAT(
+                            alumnos.apellido_paterno,
+                            ' ',
+                            COALESCE(alumnos.apellido_materno, ''),
+                            ' ',
+                            alumnos.nombre
+                        )
+                    ) as alumno
+                ")
             )
             ->orderBy('alumnos.apellido_paterno')
             ->orderBy('alumnos.apellido_materno')
             ->orderBy('alumnos.nombre')
             ->get();
 
-        $pdf = Pdf::loadView('catequista.pdf.asistencia', compact('asignacion', 'alumnos'))
-            ->setPaper('letter', 'landscape');
+        $pdf = Pdf::loadView(
+            'catequista.pdf.asistencia',
+            compact('asignacion', 'alumnos')
+        )->setPaper('letter', 'landscape');
 
         return $pdf->download('lista_asistencia_catequesis.pdf');
     }

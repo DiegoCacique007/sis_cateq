@@ -27,7 +27,6 @@ class CatequistaController extends Controller
             ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
             ->where('asigna_grupo.catequista_id', $catequistaId)
             ->where('inscripciones.periodo_id', $periodoActivoId)
-            ->where('inscripciones.estado', 1)
             ->whereNull('inscripciones.deleted_at')
             ->whereNull('asigna_grupo.deleted_at')
             ->whereNull('alumnos.deleted_at')
@@ -49,7 +48,6 @@ class CatequistaController extends Controller
             })
             ->where('asigna_grupo.catequista_id', $catequistaId)
             ->where('inscripciones.periodo_id', $periodoActivoId)
-            ->where('inscripciones.estado', 1)
             ->whereNull('inscripciones.deleted_at')
             ->whereNull('asigna_grupo.deleted_at');
 

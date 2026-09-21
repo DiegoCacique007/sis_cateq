@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Secretaria;
 
 use App\Http\Controllers\Controller;
 use App\Models\Secretaria\AsignaGrupo;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -30,7 +31,8 @@ class AsignaGrupoController extends Controller
                 'comunidades.comunidad as comunidad_nombre',
                 'grupos.nombre as grupo_nombre',
                 'niveles.nivel as nivel_nombre',
-                DB::raw("CONCAT(periodos.fecha_inicio, ' al ', periodos.fecha_fin) as periodo_nombre"),
+                'periodos.fecha_inicio',
+                'periodos.fecha_fin',
                 'users.name as catequista_nombre'
             )
             ->where('asigna_grupo.periodo_id', session('periodo_activo_id'))
@@ -39,14 +41,18 @@ class AsignaGrupoController extends Controller
                     $q->where('comunidades.comunidad', 'LIKE', "%{$search}%")
                         ->orWhere('grupos.nombre', 'LIKE', "%{$search}%")
                         ->orWhere('niveles.nivel', 'LIKE', "%{$search}%")
-                        ->orWhere('periodos.fecha_inicio', 'LIKE', "%{$search}%")
-                        ->orWhere('periodos.fecha_fin', 'LIKE', "%{$search}%")
                         ->orWhere('users.name', 'LIKE', "%{$search}%");
                 });
             })
             ->orderBy('comunidades.comunidad')
             ->orderBy('grupos.nombre')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $registros->getCollection()->transform(function ($registro) {
+            $registro->periodo_nombre = $this->formatearPeriodo($registro->fecha_inicio, $registro->fecha_fin);
+            return $registro;
+        });
 
         $comunidades = DB::table('comunidades')
             ->whereNull('deleted_at')
@@ -68,14 +74,13 @@ class AsignaGrupoController extends Controller
 
         $periodos = DB::table('periodos')
             ->whereNull('deleted_at')
-            ->select(
-                'id',
-                'fecha_inicio',
-                'fecha_fin',
-                DB::raw("CONCAT(fecha_inicio, ' al ', fecha_fin) as text")
-            )
+            ->select('id', 'fecha_inicio', 'fecha_fin')
             ->orderBy('fecha_inicio', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($periodo) {
+                $periodo->text = $this->formatearPeriodo($periodo->fecha_inicio, $periodo->fecha_fin);
+                return $periodo;
+            });
 
         $catequistas = DB::table('users')
             ->where('role', 'catequista')
@@ -96,6 +101,8 @@ class AsignaGrupoController extends Controller
 
     public function store(Request $request)
     {
+        $periodoActivoId = session('periodo_activo_id');
+
         $validated = $request->validate([
             'comunidad_id' => ['required', 'exists:comunidades,id'],
             'grupo_id' => ['required', 'exists:grupos,id'],
@@ -106,12 +113,6 @@ class AsignaGrupoController extends Controller
                     $query->where('role', 'catequista')
                         ->where('status', 'aprobado');
                 }),
-                Rule::unique('asigna_grupo', 'catequista_id')
-                    ->where('comunidad_id', $request->comunidad_id)
-                    ->where('grupo_id', $request->grupo_id)
-                    ->where('nivel_id', $request->nivel_id)
-                    ->where('periodo_id', session('periodo_activo_id'))
-                    ->whereNull('deleted_at'),
             ],
         ], [
             'comunidad_id.required' => 'Selecciona una comunidad.',
@@ -122,10 +123,33 @@ class AsignaGrupoController extends Controller
             'nivel_id.exists' => 'El nivel seleccionado no existe.',
             'catequista_id.required' => 'Selecciona un catequista.',
             'catequista_id.exists' => 'El catequista seleccionado no existe o no está aprobado.',
-            'catequista_id.unique' => 'Esta asignación de grupo ya existe.',
         ]);
 
-        $validated['periodo_id'] = session('periodo_activo_id');
+        $existente = AsignaGrupo::withTrashed()
+            ->where('comunidad_id', $validated['comunidad_id'])
+            ->where('grupo_id', $validated['grupo_id'])
+            ->where('nivel_id', $validated['nivel_id'])
+            ->where('catequista_id', $validated['catequista_id'])
+            ->where('periodo_id', $periodoActivoId)
+            ->first();
+
+        if ($existente) {
+            if ($existente->trashed()) {
+                $existente->restore();
+
+                return redirect()
+                    ->route('secretaria.asigna_grupo.index')
+                    ->with('success', 'La asignación existía anteriormente y fue reactivada correctamente.');
+            }
+
+            return back()
+                ->withErrors([
+                    'catequista_id' => 'Esta asignación de grupo ya existe.',
+                ])
+                ->withInput();
+        }
+
+        $validated['periodo_id'] = $periodoActivoId;
 
         AsignaGrupo::create($validated);
 
@@ -136,6 +160,7 @@ class AsignaGrupoController extends Controller
 
     public function update(Request $request, $id)
     {
+        $periodoActivoId = session('periodo_activo_id');
         $asignaGrupo = AsignaGrupo::findOrFail($id);
 
         $validated = $request->validate([
@@ -148,13 +173,6 @@ class AsignaGrupoController extends Controller
                     $query->where('role', 'catequista')
                         ->where('status', 'aprobado');
                 }),
-                Rule::unique('asigna_grupo', 'catequista_id')
-                    ->where('comunidad_id', $request->comunidad_id)
-                    ->where('grupo_id', $request->grupo_id)
-                    ->where('nivel_id', $request->nivel_id)
-                    ->where('periodo_id', session('periodo_activo_id'))
-                    ->whereNull('deleted_at')
-                    ->ignore($asignaGrupo->id),
             ],
         ], [
             'comunidad_id.required' => 'Selecciona una comunidad.',
@@ -165,10 +183,26 @@ class AsignaGrupoController extends Controller
             'nivel_id.exists' => 'El nivel seleccionado no existe.',
             'catequista_id.required' => 'Selecciona un catequista.',
             'catequista_id.exists' => 'El catequista seleccionado no existe o no está aprobado.',
-            'catequista_id.unique' => 'Esta asignación de grupo ya existe.',
         ]);
 
-        $validated['periodo_id'] = session('periodo_activo_id');
+        $duplicada = AsignaGrupo::withTrashed()
+            ->where('comunidad_id', $validated['comunidad_id'])
+            ->where('grupo_id', $validated['grupo_id'])
+            ->where('nivel_id', $validated['nivel_id'])
+            ->where('catequista_id', $validated['catequista_id'])
+            ->where('periodo_id', $periodoActivoId)
+            ->where('id', '!=', $asignaGrupo->id)
+            ->first();
+
+        if ($duplicada) {
+            return back()
+                ->withErrors([
+                    'catequista_id' => 'Ya existe una asignación con estos mismos datos.',
+                ])
+                ->withInput();
+        }
+
+        $validated['periodo_id'] = $periodoActivoId;
 
         $asignaGrupo->update($validated);
 
@@ -185,5 +219,13 @@ class AsignaGrupoController extends Controller
         return redirect()
             ->route('secretaria.asigna_grupo.index')
             ->with('success', 'Asignación eliminada correctamente.');
+    }
+
+    private function formatearPeriodo($fechaInicio, $fechaFin): string
+    {
+        $inicio = Carbon::parse($fechaInicio)->locale('es')->translatedFormat('F Y');
+        $fin = Carbon::parse($fechaFin)->locale('es')->translatedFormat('F Y');
+
+        return ucfirst($inicio) . ' - ' . ucfirst($fin);
     }
 }

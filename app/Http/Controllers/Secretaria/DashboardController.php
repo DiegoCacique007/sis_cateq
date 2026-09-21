@@ -20,7 +20,6 @@ class DashboardController extends Controller
             ->when($periodoActivoId, function ($query) use ($periodoActivoId) {
                 $query->where('periodo_id', $periodoActivoId);
             })
-            ->where('estado', 1)
             ->count();
 
         $totalGruposAsignados = DB::table('asigna_grupo')

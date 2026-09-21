@@ -16,12 +16,6 @@ class Inscripcion extends Model
         'alumno_id',
         'periodo_id',
         'grupo_id',
-        'asigna_grupo_id',
-        'estado',
-    ];
-
-    protected $casts = [
-        'estado' => 'integer',
     ];
 
     public function alumno()
@@ -42,15 +36,5 @@ class Inscripcion extends Model
     public function evaluaciones()
     {
         return $this->hasMany(Evaluacion::class, 'inscripcion_id');
-    }
-
-    public function asignaGrupo()
-    {
-        return $this->belongsTo(AsignaGrupo::class, 'asigna_grupo_id');
-    }
-
-    public function getEstadoTextoAttribute()
-    {
-        return $this->estado == 1 ? 'Alta' : 'Baja';
     }
 }
