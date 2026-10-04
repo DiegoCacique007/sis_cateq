@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -29,24 +30,22 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
-        // bloquear si NO aprobado
-        if ($user && $user->status !== 'aprobado') {
-    Auth::guard('web')->logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
+        if (!$user->isApprovedForAccess()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-    $msg = $user->status === 'bloqueado'
-        ? 'Tu cuenta fue bloqueada. Contacta a Secretaría.'
-        : 'Tu cuenta está pendiente de aprobación por Secretaría.';
+            $msg = match ($user->status) {
+                'bloqueado' => 'Tu cuenta fue bloqueada. Contacta a Secretaría.',
+                'pendiente' => 'Tu cuenta está pendiente de aprobación por Secretaría.',
+                default => 'Tu cuenta no tiene un estado o rol válido. Contacta a Secretaría.',
+            };
 
-    return back()->withErrors(['email' => $msg])->onlyInput('email');
-}
+            return back()->withErrors(['email' => $msg])->onlyInput('email');
+        }
 
-
-
-        //redirect por rol
-        $defaultRedirect = match ($user->role ?? null) {
-            'secretaria' => route('secretaria.dashboard', absolute: false),
+        $defaultRedirect = match ($user->operationalRole()) {
+            UserRole::Secretaria => route('secretaria.dashboard', absolute: false),
             default      => route('dashboard', absolute: false),
         };
 

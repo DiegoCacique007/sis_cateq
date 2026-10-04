@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -52,8 +53,18 @@ class User extends Authenticatable
         ];
     }
 
+    public function operationalRole(): ?UserRole
+    {
+        return UserRole::tryFrom((string) $this->role);
+    }
+
+    public function isApprovedForAccess(): bool
+    {
+        return $this->status === 'aprobado' && $this->operationalRole() !== null;
+    }
+
     /**
-     * Comunidad asignada (para coord_comunidad).
+     * Comunidad asignada al coordinador de comunidades.
      */
     public function comunidad()
     {

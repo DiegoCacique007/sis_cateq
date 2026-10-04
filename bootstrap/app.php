@@ -12,6 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            'approved' => \App\Http\Middleware\EnsureUserApproved::class,
             'role' => \App\Http\Middleware\CheckRole::class,
             'periodo.activo' => \App\Http\Middleware\AsegurarPeriodoActivo::class,
         ]);

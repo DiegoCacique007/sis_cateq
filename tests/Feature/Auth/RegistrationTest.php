@@ -2,12 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\AuthTestCase;
 
-class RegistrationTest extends TestCase
+class RegistrationTest extends AuthTestCase
 {
-    use RefreshDatabase;
 
     public function test_registration_screen_can_be_rendered(): void
     {
@@ -16,16 +15,40 @@ class RegistrationTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_new_users_can_register(): void
+    #[DataProvider('operationalRoles')]
+    public function test_new_users_can_request_a_canonical_role(string $role): void
     {
         $response = $this->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'requested_role' => $role,
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertGuest();
+        $response->assertSessionHasNoErrors()->assertRedirect(route('login'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'test@example.com', 'role' => 'usuario',
+            'requested_role' => $role, 'status' => 'pendiente',
+        ]);
+    }
+
+    public static function operationalRoles(): array
+    {
+        return [['secretaria'], ['catequista'], ['parroco'], ['coordinador_general'], ['coordinador_comunidades']];
+    }
+
+    public function test_registration_rejects_legacy_role_names(): void
+    {
+        foreach (['coord_general', 'coord_comunidad'] as $role) {
+            $this->from('/register')->post('/register', [
+                'name' => 'Test User', 'email' => 'test@example.com',
+                'password' => 'password', 'password_confirmation' => 'password',
+                'requested_role' => $role,
+            ])->assertRedirect('/register')->assertSessionHasErrors('requested_role');
+        }
+
+        $this->assertDatabaseCount('users', 0);
     }
 }

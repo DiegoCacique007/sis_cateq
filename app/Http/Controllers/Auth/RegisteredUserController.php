@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -26,19 +27,10 @@ class RegisteredUserController extends Controller
         $raw = (string) $request->input('requested_role', '');
         $key = mb_strtolower(trim($raw));
 
-        $map = [
-            'catequista' => 'catequista',
-            'secretaria' => 'secretaria',
-            'parroco' => 'parroco',
-            'coordinador_general' => 'coordinador_general',
-            'coordinador_comunidades' => 'coordinador_comunidades',
-
-            'secretaría' => 'secretaria',
-
-            'secre' => 'secretaria',
-        ];
-
-        $normalizedRequestedRole = $map[$key] ?? null;
+        $normalizedRequestedRole = match ($key) {
+            'secretaría', 'secre' => UserRole::Secretaria,
+            default => UserRole::tryFrom($key),
+        };
 
         // 2) Validación principal con mensajes personalizados
         $validated = $request->validate([
@@ -73,15 +65,7 @@ class RegisteredUserController extends Controller
         ]);
 
         // 3) Validar rol solicitado
-        $rolesPermitidos = [
-            'catequista',
-            'secretaria',
-            'parroco',
-            'coordinador_general',
-            'coordinador_comunidades',
-        ];
-
-        if (!$normalizedRequestedRole || !in_array($normalizedRequestedRole, $rolesPermitidos, true)) {
+        if ($normalizedRequestedRole === null) {
             return back()
                 ->withErrors(['requested_role' => 'Selecciona un tipo de acceso válido.'])
                 ->withInput();
@@ -91,7 +75,7 @@ class RegisteredUserController extends Controller
         Log::info('REGISTER requested_role', [
             'email' => $validated['email'],
             'raw_requested_role' => $raw,
-            'normalized_requested_role' => $normalizedRequestedRole,
+            'normalized_requested_role' => $normalizedRequestedRole->value,
         ]);
 
         // 5) Crear usuario pendiente
@@ -100,7 +84,7 @@ class RegisteredUserController extends Controller
             'email' => mb_strtolower($validated['email']),
             'password' => Hash::make($validated['password']),
             'role' => 'usuario',
-            'requested_role' => $normalizedRequestedRole,
+            'requested_role' => $normalizedRequestedRole->value,
             'status' => 'pendiente',
         ]);
 

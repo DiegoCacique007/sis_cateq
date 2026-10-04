@@ -3,12 +3,11 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
+use Tests\Support\AuthTestCase;
 
-class AuthenticationTest extends TestCase
+class AuthenticationTest extends AuthTestCase
 {
-    use RefreshDatabase;
 
     public function test_login_screen_can_be_rendered(): void
     {
@@ -19,7 +18,7 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'catequista', 'status' => 'aprobado']);
 
         $response = $this->post('/login', [
             'email' => $user->email,
@@ -49,6 +48,17 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+        $response->assertRedirect(route('login'));
+    }
+
+    #[DataProviderExternal(OperationalAccessTest::class, 'deniedAccounts')]
+    public function test_login_rejects_unapproved_or_invalid_accounts(string $status, string $role): void
+    {
+        $user = User::factory()->create(['role' => $role, 'status' => $status]);
+
+        $this->from('/login')->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertRedirect('/login')->assertSessionHasErrors('email');
+
+        $this->assertGuest();
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -10,21 +11,24 @@ class CheckRole
 {
     /**
      * Acepta uno o varios roles separados por pipe (|).
-     * Ejemplo de uso en ruta: middleware('role:secretaria|coord_general')
+     * Los valores permitidos deben corresponder a UserRole.
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!auth()->check()) {
+        $userRole = $request->user()?->operationalRole();
+
+        if ($userRole === null) {
             abort(403, 'Acceso denegado. No tienes permisos para ver esta página.');
         }
-
-        $userRole = auth()->user()->role;
 
         // Expandir roles que vengan separados por pipe dentro de un solo argumento
         $allowed = [];
         foreach ($roles as $role) {
             foreach (explode('|', $role) as $r) {
-                $allowed[] = trim($r);
+                $allowedRole = UserRole::tryFrom(trim($r));
+                if ($allowedRole !== null) {
+                    $allowed[] = $allowedRole;
+                }
             }
         }
 

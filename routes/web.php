@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use Illuminate\Support\Facades\Route;
 
 // Secretaría
@@ -40,33 +41,33 @@ Route::view('/', 'welcome')->name('welcome');
 // ==========================================
 // RUTAS GENERALES PROTEGIDAS
 // ==========================================
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'approved'])->group(function () {
     Route::post('/periodo-activo/cambiar', [\App\Http\Controllers\Secretaria\PeriodoActivoController::class, 'cambiar'])->name('periodo-activo.cambiar');
 });
 
 // ==========================================
 // DASHBOARD GENERAL DESPUÉS DEL LOGIN
 // ==========================================
-Route::middleware(['auth', \App\Http\Middleware\NoCacheHeaders::class])->get('/dashboard', function () {
+Route::middleware(['auth', 'approved', \App\Http\Middleware\NoCacheHeaders::class])->get('/dashboard', function () {
     $user = auth()->user();
 
-    if ($user->role === 'secretaria') {
+    if ($user->operationalRole() === UserRole::Secretaria) {
         return redirect()->route('secretaria.dashboard');
     }
 
-    if ($user->role === 'catequista') {
+    if ($user->operationalRole() === UserRole::Catequista) {
         return redirect()->route('catequista.dashboard');
     }
 
-    if ($user->role === 'parroco') {
+    if ($user->operationalRole() === UserRole::Parroco) {
         return redirect()->route('parroco.dashboard');
     }
 
-    if ($user->role === 'coordinador_general') {
+    if ($user->operationalRole() === UserRole::CoordinadorGeneral) {
         return redirect()->route('coordinador_general.dashboard');
     }
 
-    if ($user->role === 'coordinador_comunidades') {
+    if ($user->operationalRole() === UserRole::CoordinadorComunidades) {
         return redirect()->route('coordinador_comunidades.dashboard');
     }
 
@@ -76,7 +77,7 @@ Route::middleware(['auth', \App\Http\Middleware\NoCacheHeaders::class])->get('/d
 // ==========================================
 // SECRETARÍA - ADMIN TOTAL (CRUD completo)
 // ==========================================
-Route::middleware(['auth', 'role:secretaria', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])->prefix('secretaria')->name('secretaria.')->group(function () {
+Route::middleware(['auth', 'approved', 'role:' . UserRole::Secretaria->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])->prefix('secretaria')->name('secretaria.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/usuarios/pendientes', [UsuariosPendientesController::class, 'index'])->name('usuarios.pendientes');
@@ -110,7 +111,7 @@ Route::middleware(['auth', 'role:secretaria', \App\Http\Middleware\NoCacheHeader
 // ==========================================
 // CATEQUISTA (UPDATE evaluaciones de su grupo, READ listas propias)
 // ==========================================
-Route::middleware(['auth', 'role:catequista', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:' . UserRole::Catequista->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('catequista')
     ->name('catequista.')
     ->group(function () {
@@ -126,7 +127,7 @@ Route::middleware(['auth', 'role:catequista', \App\Http\Middleware\NoCacheHeader
 // ==========================================
 // PÁRROCO - SUPERVISIÓN GENERAL (Solo lectura)
 // ==========================================
-Route::middleware(['auth', 'role:parroco', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:' . UserRole::Parroco->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('parroco')
     ->name('parroco.')
     ->group(function () {
@@ -143,7 +144,7 @@ Route::middleware(['auth', 'role:parroco', \App\Http\Middleware\NoCacheHeaders::
 // ==========================================
 // COORDINADOR GENERAL - SUPERVISIÓN ACADÉMICA/PASTORAL
 // ==========================================
-Route::middleware(['auth', 'role:coordinador_general', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:' . UserRole::CoordinadorGeneral->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('coordinador-general')
     ->name('coordinador_general.')
     ->group(function () {
@@ -162,7 +163,7 @@ Route::middleware(['auth', 'role:coordinador_general', \App\Http\Middleware\NoCa
 // ==========================================
 // COORDINADOR DE COMUNIDADES - SUPERVISIÓN POR COMUNIDAD
 // ==========================================
-Route::middleware(['auth', 'role:coordinador_comunidades', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:' . UserRole::CoordinadorComunidades->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('coordinador-comunidades')
     ->name('coordinador_comunidades.')
     ->group(function () {
