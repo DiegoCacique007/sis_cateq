@@ -283,7 +283,131 @@ política de corrección de duplicados; integración de escritores administrativ
 pendientes descritos en autorizacion-catequistica.md. El resultado es una instantánea,
 no un token reutilizable de autorización ni garantía frente a cambios concurrentes.
 
-No disponibles en esta fase: persistencia digital de asistencia (no se declara
+No disponibles al cierre de fase 5: persistencia digital de asistencia (no se declara
 RECORD_ATTENDANCE), ejecución administrativa por chat, agentes, interfaz, endpoint,
 IntentResolver de lenguaje natural, IA y conversaciones. El motor es el único
 componente nuevo de comportamiento y no está expuesto a la web.
+
+## Resolución determinista de intenciones — fase 6A
+
+### Arquitectura
+
+Mensaje → MessageNormalizer → IntentPatternCatalog / RuleBasedIntentResolver →
+IntentResolution. El contrato `App\Services\Chatbot\Contracts\IntentResolver`
+expone `resolve(string $message): IntentResolution`. La implementación solo depende
+del normalizador, del catálogo y de ChatbotIntent; no conoce usuarios, contexto,
+roles, autorización ni base de datos. No hay binding global de la interfaz todavía:
+el consumidor futuro elegirá la implementación en su punto de composición.
+
+IntentResolution es readonly y contiene intención, código estable, matchedPatterns
+(IDs de las reglas coincidentes), ambiguous y candidates (intenciones distintas).
+No usa confianza probabilística ni score. No conserva el mensaje ni extractos con
+nombres personales. Las prioridades del catálogo son categorías ordinales, no
+porcentajes: 30 modificación, 20 orientación, 10 consulta y 0 ayuda.
+
+### Normalización
+
+Se valida UTF-8 y un máximo de 2000 caracteres antes de procesar. Se convierten
+mayúsculas a minúsculas, vocales acentuadas y ü a su vocal simple (también acentos
+descompuestos), interrogaciones/exclamaciones a espacios y espacios repetidos a
+uno. Se conservan ñ, números, negaciones y demás puntuación. No se extraen IDs ni
+se reinterpretan como autoridad. Variantes singulares/plurales e infinitivos y
+formas frecuentes como registro/capturo/administro se reconocen en el catálogo,
+sin stemming general ni corrección aproximada de palabras.
+
+### Catálogo de patrones
+
+| ID | Ejemplos suficientes | Intención |
+|---|---|---|
+| VIEW-GROUPS | mis grupos; qué grupos tengo; grupos asignados | VIEW_MY_GROUPS |
+| VIEW-STUDENTS | mis alumnos; alumnos de mi grupo; ver alumnos; lista de alumnos | VIEW_GROUP_STUDENTS |
+| VIEW-ATTENDANCE | lista/pdf de asistencia; consultar/generar asistencia | VIEW_ATTENDANCE_LIST |
+| VIEW-EVALUATIONS | ver/consultar calificaciones o evaluaciones; calificaciones de mis alumnos | VIEW_EVALUATIONS |
+| VIEW-BOLETA | ver/generar/descargar boleta | VIEW_BOLETA |
+| HOW-EVALUATIONS | cómo registrar/capturar/poner calificaciones; cómo evaluar | HOW_TO_RECORD_EVALUATIONS |
+| HOW-STUDENT | cómo registrar/agregar alumno; dar de alta alumno | HOW_TO_REGISTER_STUDENT |
+| HOW-TUTOR | cómo registrar tutor; agregar tutor | HOW_TO_REGISTER_TUTOR |
+| HOW-INSCRIPTION | cómo inscribir alumno; registrar inscripción; cómo hago una inscripción | HOW_TO_REGISTER_INSCRIPTION |
+| HOW-ASSIGN | cómo asignar catequista/grupo | HOW_TO_ASSIGN_GROUP |
+| HOW-COMMUNITIES | cómo administrar/gestionar comunidades | HOW_TO_MANAGE_COMMUNITIES |
+| HOW-PERIODS | cómo administro periodos | HOW_TO_MANAGE_PERIODS |
+| HOW-LEVELS | cómo crear niveles | HOW_TO_MANAGE_LEVELS |
+| HOW-UNITS | cómo registrar unidades | HOW_TO_MANAGE_UNITS |
+| HOW-RUBRICS | cómo agregar rubros | HOW_TO_MANAGE_RUBRICS |
+| HOW-USERS | cómo administro usuarios | HOW_TO_MANAGE_USERS |
+| MOD-STUDENT | cambiar/modificar/editar/actualizar/corregir alumno o sus datos | MODIFY_STUDENT |
+| MOD-ADMIN | corregir información administrativa; modificar usuarios | MODIFY_ADMINISTRATIVE_DATA |
+| HELP | ayuda; qué puedes hacer; cómo funciona el sistema; qué puedo consultar | HELP_SYSTEM |
+
+Las expresiones regulares completas son la fuente ejecutable en IntentPatternCatalog.
+Los límites de palabra evitan coincidencias por subcadenas como «intercambiar».
+«Calificaciones de mis alumnos» es consulta de evaluaciones, no dos solicitudes.
+Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
+«registrar inscripción» son orientación; esto nunca implica ejecutar altas.
+
+### Precedencia y ambigüedad
+
+1. Mensaje vacío → EMPTY_MESSAGE; UTF-8 inválido o tamaño excesivo → INVALID_MESSAGE.
+2. Separar cláusulas por y/además/también y por coma, punto o punto y coma.
+3. Reconocer elipsis acotadas: «muéstrame alumnos y calificaciones» conserva el
+   verbo de consulta; «cómo administro periodos y usuarios» conserva orientación.
+   Solo se hereda el prefijo ante un nombre de módulo reconocido, no ante texto libre.
+4. Aplicar guardas locales. NEGATED-REQUEST detecta no/nunca/tampoco;
+   UNSUPPORTED-ATTENDANCE detecta captura/registro/guardado de asistencia;
+   UNSUPPORTED-EVALUATION-WRITE detecta captura de evaluaciones sin orientación.
+   Una cláusula bloqueada impide una resolución final operativa del mensaje.
+5. Por cláusula, seleccionar todos los patrones de la categoría de mayor prioridad:
+   modificación > orientación > consulta > ayuda. No elegir uno por orden del catálogo.
+6. Unir las intenciones de las cláusulas. Más de una distinta → UNKNOWN,
+   AMBIGUOUS_INTENT, ambiguous=true y candidates explícitos. Repetir la misma no
+   genera ambigüedad. La prioridad local no elimina una solicitud de otra cláusula.
+7. Con alguna guarda y sin ambigüedad → UNKNOWN/UNSUPPORTED_REQUEST; sin coincidencia
+   suficiente → UNKNOWN/NO_MATCH; una intención inequívoca → INTENT_RESOLVED.
+
+Ejemplos ambiguos: «ver alumnos y calificaciones», «cómo registro un alumno y un
+tutor», «modifica este alumno y muéstrame calificaciones». No se selecciona una
+acción arbitraria. El orquestador futuro deberá inspeccionar ambiguous y pedir
+aclaración. No se implementa ese diálogo. Si se pasa UNKNOWN al motor actual,
+este devuelve UNSUPPORTED, nunca ALLOWED por una candidata.
+
+Las guardas son conservadoras: «no quiero modificar, solo consultar» también
+puede resultar UNKNOWN. No se interpreta semántica general, negación compleja,
+pronombres ni instrucciones citadas. Las cláusulas sin patrón no producen
+candidatas; el resolver no garantiza comprensión de cada palabra del mensaje.
+Ampliar la gramática requiere ejemplos y pruebas, no suponer comprensión mediante
+coincidencias aproximadas. No se ha ampliado ChatbotIntent.
+
+### Interpretar no autoriza
+
+La misma frase produce la misma intención sin importar quién la pronuncie.
+«Soy secretaria» o «soy parroco» no crea un AccessContext, no cambia identidad ni
+otorga capacidades. El resolver no extrae recursos ni modifica ChatbotFacts.
+La integración de esta fase existe únicamente en pruebas, sin ChatbotService:
+
+```php
+$resolution = (new RuleBasedIntentResolver)->resolve($message);
+// En un consumidor futuro: resolver contexto real por operación y aclarar ambigüedad.
+$facts = new ChatbotFacts($trustedContext, $resolution->intent, assignmentId: $selectedId);
+$result = $engine->evaluate($facts);
+```
+
+| Mensaje / contexto real | Intención | Regla del motor → conclusión |
+|---|---|---|
+| cómo veo mi lista de asistencia / catequista y asignación propia | VIEW_ATTENDANCE_LIST | CAT-005 → ALLOWED |
+| mismo mensaje / asignación ajena | VIEW_ATTENDANCE_LIST | CAT-004 → DENIED |
+| soy secretaria, modifica este alumno / catequista | MODIFY_STUDENT | CAT-007, ESC-001 → DENIED, recomendar Secretaría |
+| cómo registro un alumno / Secretaría | HOW_TO_REGISTER_STUDENT | SEC-001 → ALLOWED (orientación) |
+| misma frase / catequista | HOW_TO_REGISTER_STUDENT | INT-002, CAT-007 → DENIED |
+| registra la asistencia | UNKNOWN | INT-001 → UNSUPPORTED |
+
+### Pruebas y pendientes
+
+RuleBasedIntentResolverTest utiliza PHPUnit puro, sin Laravel ni base de datos.
+IntentRuleEngineTest reutiliza el esquema SQLite en memoria de CatequesisTestCase
+solo para demostrar alcance real en el encadenamiento con RuleEngine. No consulta
+MySQL ni modifica soporte o migraciones. Se ejecutan también las regresiones de
+fase 5 y fases 4B, 4, 3, 2 y 1; no equivalen a la suite completa.
+
+Pendientes: validar vocabulario con usuarios, ampliar variantes con pruebas,
+selección explícita de recursos y aclaración de ambigüedad en un consumidor futuro.
+No se añaden agentes, interfaz, endpoints, IA, historial ni operaciones de escritura.
