@@ -205,35 +205,6 @@
             font-style: italic;
         }
 
-        /* ----- ESTILOS AÑADIDOS PARA EL ÍCONO DE LA CONTRASEÑA ----- */
-        .password-wrapper {
-            position: relative;
-            width: 100%;
-            display: block;
-        }
-
-        .password-wrapper .form-control {
-            /* Da espacio para que el texto no se superponga con el ícono */
-            padding-right: 45px; 
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            color: var(--text-soft);
-            font-size: 1.1rem;
-            transition: color 0.2s;
-            z-index: 10;
-            line-height: 1;
-        }
-
-        .password-toggle:hover {
-            color: var(--blue-main);
-        }
-        /* ----------------------------------------------------------- */
 
         .btn-church{
             background: linear-gradient(135deg, var(--blue-main), var(--blue-dark));
@@ -327,7 +298,7 @@
 
             <div class="anim-item delay-1">
                 <h2 class="form-title">Restablecer Contraseña</h2>
-                <p class="form-subtitle">Ingresa tu correo y tu nueva contraseña para actualizarla inmediatamente.</p>
+                <p class="form-subtitle">Ingresa tu correo para solicitar un enlace de recuperación de contraseña.</p>
             </div>
 
             {{-- FORMULARIO --}}
@@ -347,38 +318,8 @@
                     >
                 </div>
 
-                <div class="mb-3 anim-item delay-3">
-                    <label class="form-label">Nueva Contraseña</label>
-                    <div class="password-wrapper">
-                        <input
-                            type="password"
-                            name="password"
-                            id="password"
-                            class="form-control"
-                            placeholder="Mínimo 8 caracteres"
-                            required
-                        >
-                        <i class="bi bi-eye-slash password-toggle" onclick="togglePassword('password', this)"></i>
-                    </div>
-                </div>
-
-                <div class="mb-4 anim-item delay-4">
-                    <label class="form-label">Confirmar Contraseña</label>
-                    <div class="password-wrapper">
-                        <input
-                            type="password"
-                            name="password_confirmation"
-                            id="password_confirmation"
-                            class="form-control"
-                            placeholder="Repite tu nueva contraseña"
-                            required
-                        >
-                        <i class="bi bi-eye-slash password-toggle" onclick="togglePassword('password_confirmation', this)"></i>
-                    </div>
-                </div>
-
                 <div class="anim-item delay-5">
-                    <button type="submit" class="btn btn-church w-100">Restablecer y Acceder</button>
+                    <button type="submit" class="btn btn-church w-100">Enviar enlace de recuperación</button>
                 </div>
             </form>
 
@@ -406,20 +347,6 @@
         });
     }
 
-    function togglePassword(inputId, icon) {
-        const input = document.getElementById(inputId);
-        if (input.type === "password") {
-            input.type = "text";
-            icon.classList.remove("bi-eye-slash");
-            icon.classList.add("bi-eye");
-            icon.style.color = "var(--blue-main)";
-        } else {
-            input.type = "password";
-            icon.classList.remove("bi-eye");
-            icon.classList.add("bi-eye-slash");
-            icon.style.color = "var(--text-soft)";
-        }
-    }
 
     // 2. SweetAlert2 - Alertas dinámicas
     document.addEventListener("DOMContentLoaded", function() {
@@ -459,7 +386,7 @@
             ...swalConfig,
             icon: "success",
             iconColor: "#0056b3",
-            title: "¡Enlace Enviado!",
+            title: "Solicitud recibida",
             text: "{{ session('status') }}",
             confirmButtonText: "Aceptar"
         });

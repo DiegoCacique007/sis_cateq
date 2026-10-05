@@ -341,7 +341,7 @@
                 </div>
 
                 <div class="anim-item delay-4">
-                    <button type="submit" class="btn btn-church w-100">Guardar y Acceder</button>
+                    <button type="submit" class="btn btn-church w-100">Restablecer contraseña</button>
                 </div>
             </form>
 
