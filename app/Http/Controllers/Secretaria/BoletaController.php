@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Secretaria;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
-use App\Models\Secretaria\AsignaGrupo;
-use App\Models\Secretaria\Evaluacion;
-use App\Models\Secretaria\Inscripcion;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Nivel;
 use App\Models\Secretaria\Rubro;
 use App\Models\Secretaria\Unidad;
-use App\Models\User;
+use App\Queries\AccessibleAsignaciones;
+use App\Queries\AccessibleCatequistas;
+use App\Queries\AccessibleEvaluaciones;
+use App\Queries\AccessibleInscripciones;
+use App\Services\Authorization\CatequesisAccess;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class BoletaController extends Controller
 {
@@ -20,34 +22,21 @@ class BoletaController extends Controller
      */
     public function index(Request $request)
     {
-        $periodoId = session('periodo_activo_id');
-
-        // Catálogos para los filtros
-        $catequistas = User::where('role', 'catequista')
-            ->where('status', 'aprobado')
-            ->orderBy('name')
-            ->get();
-
-        $niveles = Nivel::orderBy('nivel')->get();
-
-        // Grupos disponibles según asignaciones del periodo activo
-        $gruposDisponibles = DB::table('asigna_grupo')
-            ->join('grupos', 'asigna_grupo.grupo_id', '=', 'grupos.id')
-            ->where(function ($q) use ($periodoId) {
-                $q->where('asigna_grupo.periodo_id', $periodoId)
-                  ->orWhereNull('asigna_grupo.periodo_id');
-            })
-            ->whereNull('asigna_grupo.deleted_at')
-            ->select('grupos.id', 'grupos.nombre')
-            ->distinct()
-            ->orderBy('grupos.nombre')
-            ->get();
-
+        $request->validate([
+            'catequista_id' => ['nullable', 'integer', 'min:1'],
+            'nivel_id' => ['nullable', 'integer', 'min:1'],
+            'grupo_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $context = app(CatequesisHttp::class)->context($request, C::ViewBoletas);
+        $periodoId = $context->activePeriodId;
+        $catequistas = app(AccessibleCatequistas::class)->for($context)->orderBy('name')->get();
+        $niveles = Nivel::whereIn('id', app(AccessibleAsignaciones::class)->for($context)->select('nivel_id'))->orderBy('nivel')->get();
+        $gruposDisponibles = \App\Models\Secretaria\Grupo::whereIn('id', app(AccessibleAsignaciones::class)->for($context)->select('grupo_id'))->orderBy('nombre')->get();
         // Filtros seleccionados
         $filtros = [
             'catequista_id' => $request->input('catequista_id'),
-            'nivel_id'      => $request->input('nivel_id'),
-            'grupo_id'      => $request->input('grupo_id'),
+            'nivel_id' => $request->input('nivel_id'),
+            'grupo_id' => $request->input('grupo_id'),
         ];
 
         $alumnos = collect();
@@ -55,33 +44,26 @@ class BoletaController extends Controller
         // Solo consultar si se aplicó al menos un filtro
         if ($filtros['catequista_id'] || $filtros['nivel_id'] || $filtros['grupo_id']) {
             // Obtener asignaciones que coincidan con los filtros
-            $asignaciones = AsignaGrupo::query()
-                ->where(function ($q) use ($periodoId) {
-                    $q->where('periodo_id', $periodoId)
-                      ->orWhereNull('periodo_id');
-                })
-                ->when($filtros['catequista_id'], fn($q) => $q->where('catequista_id', $filtros['catequista_id']))
-                ->when($filtros['nivel_id'], fn($q) => $q->where('nivel_id', $filtros['nivel_id']))
-                ->when($filtros['grupo_id'], fn($q) => $q->where('grupo_id', $filtros['grupo_id']))
+            $asignaciones = app(AccessibleAsignaciones::class)->for($context)
+                ->when($filtros['catequista_id'], fn ($q) => $q->where('catequista_id', $filtros['catequista_id']))
+                ->when($filtros['nivel_id'], fn ($q) => $q->where('nivel_id', $filtros['nivel_id']))
+                ->when($filtros['grupo_id'], fn ($q) => $q->where('grupo_id', $filtros['grupo_id']))
                 ->with(['comunidad', 'grupo', 'nivel', 'catequista'])
                 ->get();
 
             // Obtener los grupo_ids de esas asignaciones
             $grupoIds = $asignaciones->pluck('grupo_id')->unique()->toArray();
 
-            if (!empty($grupoIds)) {
-                $alumnos = Inscripcion::query()
+            if (! empty($grupoIds)) {
+                $alumnos = app(AccessibleInscripciones::class)->for($context)
                     ->whereIn('grupo_id', $grupoIds)
-                    ->where(function ($q) use ($periodoId) {
-                        $q->where('periodo_id', $periodoId)
-                          ->orWhereNull('periodo_id');
-                    })
                     ->whereNull('deleted_at')
                     ->with(['alumno.comunidad', 'alumno.tutores', 'grupo'])
                     ->get()
                     ->map(function ($inscripcion) use ($asignaciones) {
-                        $asignacion = $asignaciones->firstWhere('grupo_id', $inscripcion->grupo_id);
+                        $asignacion = $asignaciones->where('grupo_id', $inscripcion->grupo_id)->sole();
                         $inscripcion->asignacion = $asignacion;
+
                         return $inscripcion;
                     });
             }
@@ -97,28 +79,25 @@ class BoletaController extends Controller
      */
     public function generar(Request $request, $inscripcionId)
     {
-        $periodoId = session('periodo_activo_id');
-
-        $inscripcion = Inscripcion::with(['alumno.comunidad', 'alumno.tutores', 'grupo', 'periodo'])
-            ->findOrFail($inscripcionId);
-
-        // Encontrar la asignación correcta para obtener el nivel y la catequista
-        $asignacionId = $request->input('asignacion_id');
-
-        if ($asignacionId) {
-            $asignacion = AsignaGrupo::where('id', $asignacionId)
-                ->with(['nivel', 'catequista', 'comunidad'])
-                ->first();
-        } else {
-            $asignacion = AsignaGrupo::where('grupo_id', $inscripcion->grupo_id)
-                ->where(function ($q) use ($periodoId) {
-                    $q->where('periodo_id', $periodoId)
-                      ->orWhereNull('periodo_id');
-                })
-                ->with(['nivel', 'catequista', 'comunidad'])
-                ->first();
+        $request->validate(['asignacion_id' => ['nullable', 'integer', 'min:1']]);
+        abort_unless(ctype_digit((string) $inscripcionId) && (int) $inscripcionId > 0, 404);
+        $http = app(CatequesisHttp::class);
+        $context = $http->context($request, C::ViewBoletas);
+        $periodoId = $context->activePeriodId;
+        $access = app(CatequesisAccess::class);
+        $http->enforce($access->canViewBoleta($context, (int) $inscripcionId));
+        $inscripcion = app(AccessibleInscripciones::class)->for($context)
+            ->with(['alumno.comunidad', 'alumno.tutores', 'grupo', 'periodo'])->findOrFail($inscripcionId);
+        $assignmentQuery = app(AccessibleAsignaciones::class)->for($context)
+            ->where('grupo_id', $inscripcion->grupo_id)->where('periodo_id', $inscripcion->periodo_id);
+        if ($request->filled('asignacion_id')) {
+            $assignmentQuery->whereKey($request->integer('asignacion_id'));
         }
-
+        $assignments = $assignmentQuery->with(['nivel', 'catequista', 'comunidad'])->get();
+        abort_if($assignments->isEmpty(), 404);
+        abort_unless($assignments->count() === 1, 409, 'Solicita revisión de la asignación a Secretaría.');
+        $asignacion = $assignments->sole();
+        $http->enforce($access->canUseInscripcionAsignacion($context, (int) $inscripcionId, $asignacion->id));
         $nivelId = $asignacion?->nivel_id;
 
         // Obtener las unidades de ese nivel ordenadas
@@ -130,11 +109,7 @@ class BoletaController extends Controller
         $rubros = Rubro::orderBy('id')->get();
 
         // Obtener las evaluaciones del alumno (por inscripcion_id)
-        $evaluaciones = Evaluacion::where('inscripcion_id', $inscripcionId)
-            ->where(function ($q) use ($periodoId) {
-                $q->where('periodo_id', $periodoId)
-                  ->orWhereNull('periodo_id');
-            })
+        $evaluaciones = app(AccessibleEvaluaciones::class)->for($context)->where('inscripcion_id', $inscripcionId)
             ->get();
 
         // Organizar las evaluaciones en una estructura: [unidad_id][rubro_id] => calificacion
@@ -161,7 +136,7 @@ class BoletaController extends Controller
         }
 
         // Promedio final general (promedio de todos los promedios de unidad)
-        $promediosValidos = array_filter($promediosUnidad, fn($v) => $v !== null);
+        $promediosValidos = array_filter($promediosUnidad, fn ($v) => $v !== null);
         $promedioFinal = count($promediosValidos) > 0
             ? round(array_sum($promediosValidos) / count($promediosValidos), 1)
             : null;
@@ -169,8 +144,8 @@ class BoletaController extends Controller
         // Periodo texto
         $periodo = $inscripcion->periodo;
         $periodoTexto = $periodo
-            ? ($periodo->fecha_inicio?->format('Y') . ' - ' . $periodo->fecha_fin?->format('Y'))
-            : (date('Y') . ' - ' . (date('Y') + 1));
+            ? ($periodo->fecha_inicio?->format('Y').' - '.$periodo->fecha_fin?->format('Y'))
+            : (date('Y').' - '.(date('Y') + 1));
 
         return view('secretaria.boletas.boleta_pdf', compact(
             'inscripcion', 'asignacion', 'unidades', 'rubros',

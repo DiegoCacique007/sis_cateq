@@ -2,99 +2,51 @@
 
 namespace App\Http\Controllers\Secretaria;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Models\Secretaria\Alumno;
-use App\Models\Secretaria\Comunidad;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Nivel;
+use App\Queries\AccessibleAlumnos;
+use App\Queries\AccessibleAsignaciones;
+use App\Queries\AccessibleComunidades;
+use App\Queries\AccessibleInscripciones;
+use Illuminate\Http\Request;
 
 class AlumnoComunidadController extends Controller
 {
     public function index(Request $request)
     {
-        $periodoActivoId = session('periodo_activo_id');
-
-        $query = Alumno::with([
-            'comunidad',
-            'inscripciones' => function ($q) use ($periodoActivoId) {
-                $q->where('periodo_id', $periodoActivoId)
-                    ->addSelect('inscripciones.*')
-                    ->addSelect([
-                        'nivel_nombre' => DB::table('asigna_grupo')
-                            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
-                            ->select('niveles.nivel')
-                            ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
-                            ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
-                            ->whereNull('asigna_grupo.deleted_at')
-                            ->whereNull('niveles.deleted_at')
-                            ->limit(1),
-
-                        'nivel_numero' => DB::table('asigna_grupo')
-                            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
-                            ->select('niveles.numero')
-                            ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
-                            ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
-                            ->whereNull('asigna_grupo.deleted_at')
-                            ->whereNull('niveles.deleted_at')
-                            ->limit(1),
-
-                        'sacramento_nombre' => DB::table('asigna_grupo')
-                            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
-                            ->select('niveles.sacramento')
-                            ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
-                            ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
-                            ->whereNull('asigna_grupo.deleted_at')
-                            ->whereNull('niveles.deleted_at')
-                            ->limit(1),
-                    ]);
-            }
+        $request->validate([
+            'comunidad_id' => ['nullable', 'integer', 'min:1'],
+            'sacramento' => ['nullable', 'string', 'max:255'],
+            'numero_nivel' => ['nullable', 'integer', 'min:1'],
         ]);
-
-        if ($request->filled('comunidad_id')) {
-            $query->where('comunidad_id', $request->comunidad_id);
+        $context = app(CatequesisHttp::class)->context($request, C::ViewGroupStudents);
+        $assignments = app(AccessibleAsignaciones::class)->for($context);
+        $inscriptions = app(AccessibleInscripciones::class)->forStudentReport($context);
+        if ($request->filled('sacramento') || $request->filled('numero_nivel')) {
+            $matching = (clone $assignments)->whereHas('nivel', function ($q) use ($request) {
+                $q->when($request->filled('sacramento'), fn ($q) => $q->where('sacramento', $request->input('sacramento')))
+                    ->when($request->filled('numero_nivel'), fn ($q) => $q->where('numero', $request->integer('numero_nivel')));
+            });
+            $inscriptions->whereIn('grupo_id', $matching->select('grupo_id'));
         }
-
-        $query->whereHas('inscripciones', function ($q) use ($request, $periodoActivoId) {
-            $q->where('periodo_id', $periodoActivoId);
-
-            if ($request->filled('sacramento') || $request->filled('numero_nivel')) {
-                $q->whereExists(function ($subquery) use ($request) {
-                    $subquery
-                        ->select(DB::raw(1))
-                        ->from('asigna_grupo')
-                        ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
-                        ->whereColumn('asigna_grupo.grupo_id', 'inscripciones.grupo_id')
-                        ->whereColumn('asigna_grupo.periodo_id', 'inscripciones.periodo_id')
-                        ->whereNull('asigna_grupo.deleted_at')
-                        ->whereNull('niveles.deleted_at');
-
-                    if ($request->filled('sacramento')) {
-                        $subquery->where('niveles.sacramento', $request->sacramento);
-                    }
-
-                    if ($request->filled('numero_nivel')) {
-                        $subquery->where('niveles.numero', $request->numero_nivel);
-                    }
-                });
+        $registros = app(AccessibleAlumnos::class)->for($context)
+            ->whereIn('alumnos.id', (clone $inscriptions)->select('alumno_id'))
+            ->when($request->filled('comunidad_id'), fn ($q) => $q->where('comunidad_id', $request->integer('comunidad_id')))
+            ->with(['comunidad', 'inscripciones' => fn ($q) => $q->whereIn('inscripciones.id', (clone $inscriptions)->select('inscripciones.id'))])
+            ->paginate(15)->withQueryString();
+        $groupIds = $registros->getCollection()->flatMap(fn ($a) => $a->inscripciones->pluck('grupo_id'));
+        $byGroup = (clone $assignments)->whereIn('grupo_id', $groupIds)->with('nivel')->get()->groupBy('grupo_id');
+        foreach ($registros as $alumno) {
+            foreach ($alumno->inscripciones as $inscripcion) {
+                $candidates = $byGroup->get($inscripcion->grupo_id, collect());
+                $inscripcion->setRelation('asignaGrupo', $candidates->count() === 1 ? $candidates->sole() : null);
             }
-        });
+        }
+        $comunidades = app(AccessibleComunidades::class)->for($context)->orderBy('comunidad')->get();
+        $nivelesDisponibles = Nivel::whereIn('id', (clone $assignments)->select('nivel_id'))->select('numero')->distinct()->orderBy('numero')->get();
 
-        $registros = $query
-            ->paginate(15)
-            ->withQueryString();
-
-        $comunidades = Comunidad::orderBy('comunidad')->get();
-
-        $nivelesDisponibles = Nivel::select('numero')
-            ->distinct()
-            ->orderBy('numero')
-            ->get();
-
-        return view('secretaria.alumnos_comunidades.index', compact(
-            'registros',
-            'comunidades',
-            'nivelesDisponibles'
-        ));
+        return view('secretaria.alumnos_comunidades.index', compact('registros', 'comunidades', 'nivelesDisponibles'));
     }
 }

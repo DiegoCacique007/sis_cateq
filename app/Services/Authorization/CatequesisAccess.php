@@ -67,6 +67,36 @@ final class CatequesisAccess
         return $this->exists($query->for($context)->whereKey($id)->exists());
     }
 
+    public function canUseAsignacion(AccessContext $context, int $id): AccessDecision
+    {
+        $decision = $this->canViewAsignacion($context, $id);
+        if (! $decision->isAllowed()) {
+            return $decision;
+        }
+        $assignment = (new AccessibleAsignaciones($this))->for($context)->findOrFail($id);
+
+        return AccessibleAsignaciones::valid()->where('grupo_id', $assignment->grupo_id)
+            ->where('periodo_id', $assignment->periodo_id)->count() === 1
+            ? AccessDecision::allow() : AccessDecision::ambiguous();
+    }
+
+    public function canUseInscripcionAsignacion(AccessContext $context, int $inscripcionId, int $asignacionId): AccessDecision
+    {
+        $decision = $this->canViewInscripcion($context, $inscripcionId);
+        if (! $decision->isAllowed()) {
+            return $decision;
+        }
+        $assignment = (new AccessibleAsignaciones($this))->for($context)->whereKey($asignacionId)->get();
+        if ($assignment->isEmpty()) {
+            return AccessDecision::deny();
+        }
+        $assignment = $assignment->sole();
+
+        return $this->exists((new AccessibleInscripciones($this))->for($context)->whereKey($inscripcionId)
+            ->where('grupo_id', $assignment->grupo_id)->where('periodo_id', $assignment->periodo_id)
+            ->whereHas('alumno', fn ($q) => $q->where('comunidad_id', $assignment->comunidad_id))->exists());
+    }
+
     public function canViewAlumno(AccessContext $context, int $id): AccessDecision
     {
         $capability = $context->role === R::Catequista ? C::ViewGroupStudents : C::ViewStudents;

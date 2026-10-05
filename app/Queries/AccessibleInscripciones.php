@@ -18,6 +18,17 @@ final class AccessibleInscripciones
         return $this->candidates($context)->where($this->assignmentCount(), '=', 1);
     }
 
+    /** El reporte administrativo conserva alumnos sin asignación inequívoca, sin inferir nivel. */
+    public function forStudentReport(AccessContext $context): Builder
+    {
+        if ($context->role !== R::Secretaria) {
+            return $this->for($context);
+        }
+        $query = Inscripcion::query()->where('periodo_id', $context->activePeriodId)->whereHas('alumno')->whereHas('periodo');
+
+        return $this->access->can($context, C::ViewGroupStudents)->isAllowed() ? $query : $query->whereRaw('1=0');
+    }
+
     private function candidates(AccessContext $context): Builder
     {
         $query = Inscripcion::query()->where('inscripciones.periodo_id', $context->activePeriodId)

@@ -2,52 +2,45 @@
 
 namespace App\Http\Controllers\Catequista;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Evaluacion;
+use App\Models\Secretaria\Rubro;
+use App\Queries\AccessibleAsignaciones;
+use App\Queries\AccessibleEvaluaciones;
+use App\Queries\AccessibleInscripciones;
+use App\Services\Authorization\CatequesisAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class EvaluacionController extends Controller
 {
     public function index(Request $request)
     {
-        $catequistaId = auth()->id();
+        $request->validate([
+            'asignacion_id' => ['nullable', 'integer', 'min:1'],
+            'unidad_id' => ['nullable', 'regex:/^(final|[1-9][0-9]*)$/'],
+        ]);
+        $http = app(CatequesisHttp::class);
+        $context = $http->context($request, C::ViewEvaluations);
         $unidadId = $request->input('unidad_id');
-
-        $asignacionesQuery = DB::table('asigna_grupo')
-            ->join('comunidades', 'asigna_grupo.comunidad_id', '=', 'comunidades.id')
-            ->join('grupos', 'asigna_grupo.grupo_id', '=', 'grupos.id')
-            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
-            ->join('periodos', 'asigna_grupo.periodo_id', '=', 'periodos.id')
-            ->where('asigna_grupo.catequista_id', $catequistaId)
-            ->where('asigna_grupo.periodo_id', session('periodo_activo_id'))
-            ->whereNull('asigna_grupo.deleted_at')
-            ->whereNull('comunidades.deleted_at')
-            ->whereNull('grupos.deleted_at')
-            ->whereNull('niveles.deleted_at')
-            ->whereNull('periodos.deleted_at')
-            ->select(
-                'asigna_grupo.id as asignacion_id',
-                'asigna_grupo.grupo_id',
-                'asigna_grupo.periodo_id',
-                'asigna_grupo.nivel_id',
-                'comunidades.comunidad',
-                'grupos.nombre as grupo',
-                'niveles.nivel',
-                DB::raw("CONCAT(periodos.fecha_inicio, ' al ', periodos.fecha_fin) as periodo"),
-                DB::raw("CONCAT(niveles.nivel, ' - Grupo ', grupos.nombre, ' (', comunidades.comunidad, ')') as texto_asignacion")
-            );
-
-        $asignaciones = $asignacionesQuery->get();
-        $asignacionId = $request->input('asignacion_id');
-
+        $asignaciones = app(AccessibleAsignaciones::class)->for($context)
+            ->with(['comunidad', 'grupo', 'nivel', 'periodo'])->get()->map(fn ($a) => (object) [
+                'asignacion_id' => $a->id, 'grupo_id' => $a->grupo_id,
+                'periodo_id' => $a->periodo_id, 'nivel_id' => $a->nivel_id,
+                'comunidad' => $a->comunidad->comunidad, 'grupo' => $a->grupo->nombre,
+                'nivel' => $a->nivel->nivel,
+                'periodo' => $a->periodo->fecha_inicio->format('Y-m-d').' al '.$a->periodo->fecha_fin->format('Y-m-d'),
+                'texto_asignacion' => $a->nivel->nivel.' - Grupo '.$a->grupo->nombre.' ('.$a->comunidad->comunidad.')',
+            ]);
+        $asignacionId = $request->integer('asignacion_id') ?: ($asignaciones->count() === 1 ? $asignaciones->sole()->asignacion_id : null);
+        $asignacion = null;
         if ($asignacionId) {
-            $asignacion = $asignaciones->firstWhere('asignacion_id', (int) $asignacionId);
-        } else {
-            $asignacion = $asignaciones->first();
-            $asignacionId = $asignacion ? $asignacion->asignacion_id : null;
+            $http->enforce(app(CatequesisAccess::class)->canUseAsignacion($context, $asignacionId));
+            $asignacion = $asignaciones->where('asignacion_id', $asignacionId)->sole();
         }
-
         $unidades = collect();
         $unidadSeleccionada = null;
         $rubros = collect();
@@ -55,46 +48,31 @@ class EvaluacionController extends Controller
         $totalRubros = 0;
 
         if ($asignacion) {
-            $unidades = DB::table('unidades')
-                ->where('nivel_id', $asignacion->nivel_id)
-                ->whereNull('deleted_at')
-                ->select(
-                    'id',
-                    'numero',
-                    'nombre',
-                    DB::raw("CONCAT('Unidad ', numero, ' - ', nombre) as text")
-                )
-                ->orderBy('numero')
-                ->get();
+            $unidades = \App\Models\Secretaria\Unidad::where('nivel_id', $asignacion->nivel_id)
+                ->orderBy('numero')->get()->map(fn ($u) => (object) [
+                    'id' => $u->id, 'numero' => $u->numero, 'nombre' => $u->nombre, 'text' => $u->unidad_texto,
+                ]);
 
             if ($unidadId === 'final') {
-                $unidadSeleccionada = (object)[
+                $unidadSeleccionada = (object) [
                     'id' => 'final',
-                    'text' => 'Resumen Final de Nivel'
+                    'text' => 'Resumen Final de Nivel',
                 ];
 
                 $rubros = DB::table('rubros')->whereNull('deleted_at')->select('id', 'valor')->get();
                 $totalRubros = (float) $rubros->sum('valor');
 
-                $alumnosBase = DB::table('inscripciones')
-                    ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
+                $alumnosBase = app(AccessibleInscripciones::class)->for($context)
                     ->where('inscripciones.grupo_id', $asignacion->grupo_id)
-                    ->where('inscripciones.periodo_id', $asignacion->periodo_id)
-                    ->whereNull('inscripciones.deleted_at')
-                    ->whereNull('alumnos.deleted_at')
-                    ->select(
-                        'inscripciones.id as inscripcion_id',
-                        'alumnos.id as alumno_id',
-                        DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre")
-                    )
-                    ->orderBy('alumnos.nombre')
-                    ->orderBy('alumnos.apellido_paterno')
-                    ->get();
+                    ->with('alumno')->get()->map(fn ($i) => (object) [
+                        'inscripcion_id' => $i->id, 'alumno_id' => $i->alumno_id,
+                        'alumno_nombre' => $i->alumno->nombre_completo,
+                    ])->sortBy('alumno_nombre')->values();
 
                 $inscripcionesIds = $alumnosBase->pluck('inscripcion_id')->toArray();
                 $unidadesIds = $unidades->pluck('id')->toArray();
 
-                $evaluaciones = DB::table('evaluaciones')
+                $evaluaciones = app(AccessibleEvaluaciones::class)->for($context)
                     ->whereIn('inscripcion_id', $inscripcionesIds)
                     ->whereIn('unidad_id', $unidadesIds)
                     ->whereNull('deleted_at')
@@ -127,6 +105,7 @@ class EvaluacionController extends Controller
                 });
             } else {
                 $unidadSeleccionada = $unidades->firstWhere('id', (int) $unidadId);
+                abort_if($unidadId && ! $unidadSeleccionada, 404);
 
                 $rubros = DB::table('rubros')
                     ->whereNull('deleted_at')
@@ -137,31 +116,16 @@ class EvaluacionController extends Controller
                 $totalRubros = (float) $rubros->sum('valor');
 
                 if ($unidadSeleccionada) {
-                    $alumnosBase = DB::table('inscripciones')
-                        ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
+                    $alumnosBase = app(AccessibleInscripciones::class)->for($context)
                         ->where('inscripciones.grupo_id', $asignacion->grupo_id)
-                        ->where('inscripciones.periodo_id', $asignacion->periodo_id)
-                        ->whereNull('inscripciones.deleted_at')
-                        ->whereNull('alumnos.deleted_at')
-                        ->select(
-                            'inscripciones.id as inscripcion_id',
-                            'alumnos.id as alumno_id',
-                            DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre")
-                        )
-                        ->groupBy(
-                            'inscripciones.id',
-                            'alumnos.id',
-                            'alumnos.nombre',
-                            'alumnos.apellido_paterno',
-                            'alumnos.apellido_materno'
-                        )
-                        ->orderBy('alumnos.nombre')
-                        ->orderBy('alumnos.apellido_paterno')
-                        ->get();
+                        ->with('alumno')->get()->map(fn ($i) => (object) [
+                        'inscripcion_id' => $i->id, 'alumno_id' => $i->alumno_id,
+                        'alumno_nombre' => $i->alumno->nombre_completo,
+                    ])->sortBy('alumno_nombre')->values();
 
                     $inscripcionesIds = $alumnosBase->pluck('inscripcion_id')->toArray();
 
-                    $evaluaciones = DB::table('evaluaciones')
+                    $evaluaciones = app(AccessibleEvaluaciones::class)->for($context)
                         ->whereIn('inscripcion_id', $inscripcionesIds)
                         ->where('unidad_id', $unidadSeleccionada->id)
                         ->whereNull('deleted_at')
@@ -225,112 +189,61 @@ class EvaluacionController extends Controller
     public function guardar(Request $request)
     {
         $validated = $request->validate([
-            'asignacion_id' => ['required', 'integer'],
-            'unidad_id' => ['required', 'exists:unidades,id'],
+            'asignacion_id' => ['required', 'integer', 'min:1'],
+            'unidad_id' => ['required', 'integer', 'min:1'],
             'calificaciones' => ['required', 'array'],
-            'calificaciones.*' => ['array'],
-            'calificaciones.*.*' => ['nullable', 'numeric'],
-        ], [
-            'calificaciones.*.*.numeric' => 'La calificación debe ser un valor numérico.',
+            'calificaciones.*' => ['required', 'array', 'min:1'],
+            'calificaciones.*.*' => ['nullable', 'numeric', 'min:0'],
         ]);
-
-        $catequistaId = auth()->id();
-
-        $asignacion = DB::table('asigna_grupo')
-            ->where('id', $validated['asignacion_id'])
-            ->where('catequista_id', $catequistaId)
-            ->where('periodo_id', session('periodo_activo_id'))
-            ->whereNull('deleted_at')
-            ->first();
-
-        if (!$asignacion) {
-            return redirect()
-                ->route('catequista.evaluaciones.index')
-                ->withErrors(['grupo' => 'No tienes un grupo asignado.']);
-        }
-
-        $unidadValida = DB::table('unidades')
-            ->where('id', $validated['unidad_id'])
-            ->where('nivel_id', $asignacion->nivel_id)
-            ->whereNull('deleted_at')
-            ->exists();
-
-        if (!$unidadValida) {
-            return redirect()
-                ->route('catequista.evaluaciones.index')
-                ->withErrors(['unidad_id' => 'La unidad seleccionada no pertenece a tu nivel asignado.']);
-        }
-
-        $inscripcionesValidas = DB::table('inscripciones')
-            ->where('grupo_id', $asignacion->grupo_id)
-            ->where('periodo_id', $asignacion->periodo_id)
-            ->whereNull('deleted_at')
-            ->pluck('id')
-            ->map(fn ($id) => (string) $id)
-            ->toArray();
-
-        $rubrosValidos = DB::table('rubros')
-            ->whereNull('deleted_at')
-            ->pluck('id')
-            ->map(fn ($id) => (string) $id)
-            ->toArray();
-
-        $guardadas = 0;
-        $eliminadas = 0;
-
-        DB::transaction(function () use ($validated, $inscripcionesValidas, $rubrosValidos, &$guardadas, &$eliminadas) {
-            foreach ($validated['calificaciones'] as $inscripcionId => $rubrosAlumno) {
-                if (!in_array((string) $inscripcionId, $inscripcionesValidas, true)) {
-                    continue;
-                }
-
-                foreach ($rubrosAlumno as $rubroId => $calificacion) {
-                    if (!in_array((string) $rubroId, $rubrosValidos, true)) {
-                        continue;
+        DB::transaction(function () use ($request, $validated) {
+            $http = app(CatequesisHttp::class);
+            $context = $http->context($request, C::ManageEvaluations);
+            $access = app(CatequesisAccess::class);
+            $http->enforce($access->canUseAsignacion($context, $validated['asignacion_id']));
+            $assignment = app(AccessibleAsignaciones::class)->for($context)->lockForUpdate()->findOrFail($validated['asignacion_id']);
+            $rubros = Rubro::query()->get()->keyBy('id');
+            foreach ($validated['calificaciones'] as $inscripcionId => $items) {
+                abort_unless(ctype_digit((string) $inscripcionId) && (int) $inscripcionId > 0, 404);
+                $http->enforce($access->canViewInscripcion($context, (int) $inscripcionId));
+                app(AccessibleInscripciones::class)->for($context)->where('grupo_id', $assignment->grupo_id)
+                    ->lockForUpdate()->findOrFail($inscripcionId);
+                foreach ($items as $rubroId => $calificacion) {
+                    abort_unless(ctype_digit((string) $rubroId) && (int) $rubroId > 0, 404);
+                    $http->enforce($access->canCaptureEvaluacion($context, (int) $inscripcionId, (int) $validated['unidad_id'], (int) $rubroId));
+                    $rubro = $rubros->get($rubroId);
+                    if ($calificacion !== null && (float) $calificacion > (float) $rubro->valor) {
+                        throw ValidationException::withMessages(['calificaciones' => 'La calificación no puede superar el valor máximo del rubro.']);
                     }
-
-                    $evaluacion = Evaluacion::withTrashed()
-                        ->where('inscripcion_id', $inscripcionId)
-                        ->where('unidad_id', $validated['unidad_id'])
-                        ->where('rubro_id', $rubroId)
-                        ->first();
-
+                    // Restauración limitada al destino autorizado; los demás scopes permanecen.
+                    $matches = app(AccessibleEvaluaciones::class)->for($context)->withTrashed()
+                        ->where('inscripcion_id', $inscripcionId)->where('unidad_id', $validated['unidad_id'])
+                        ->where('rubro_id', $rubroId)->lockForUpdate()->get();
+                    abort_if($matches->count() > 1, 409, 'Existen evaluaciones duplicadas. Solicita revisión a Secretaría.');
+                    $evaluacion = $matches->isEmpty() ? null : $matches->sole();
                     if ($calificacion === null || $calificacion === '') {
-                        if ($evaluacion && !$evaluacion->trashed()) {
+                        if ($evaluacion && ! $evaluacion->trashed()) {
                             $evaluacion->delete();
-                            $eliminadas++;
                         }
 
                         continue;
                     }
-
                     if ($evaluacion) {
                         if ($evaluacion->trashed()) {
                             $evaluacion->restore();
                         }
-
-                        $evaluacion->update([
-                            'calificacion' => $calificacion,
-                        ]);
+                        $evaluacion->update(['calificacion' => $calificacion, 'periodo_id' => $context->activePeriodId]);
                     } else {
                         Evaluacion::create([
-                            'inscripcion_id' => $inscripcionId,
-                            'unidad_id' => $validated['unidad_id'],
-                            'rubro_id' => $rubroId,
-                            'calificacion' => $calificacion,
+                            'inscripcion_id' => $inscripcionId, 'unidad_id' => $validated['unidad_id'],
+                            'rubro_id' => $rubroId, 'calificacion' => $calificacion, 'periodo_id' => $context->activePeriodId,
                         ]);
                     }
-
-                    $guardadas++;
                 }
             }
         });
 
-        return redirect()
-            ->route('catequista.evaluaciones.index', [
-                'asignacion_id' => $validated['asignacion_id'],
-                'unidad_id' => $validated['unidad_id'],
-            ])
-            ->with('success', "Calificaciones guardadas correctamente. Registros actualizados: {$guardadas}.");
+        return redirect()->route('catequista.evaluaciones.index', [
+            'asignacion_id' => $validated['asignacion_id'], 'unidad_id' => $validated['unidad_id'],
+        ])->with('success', 'Calificaciones guardadas correctamente.');
     }
 }

@@ -2,183 +2,58 @@
 
 namespace App\Http\Controllers\Catequista;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
+use App\Http\Support\CatequesisHttp;
+use App\Queries\AccessibleAlumnos;
+use App\Queries\AccessibleAsignaciones;
+use App\Queries\AccessibleInscripciones;
+use App\Services\Authorization\CatequesisAccess;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 
 class MiGrupoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $catequistaId = auth()->id();
-        $periodoActivoId = session('periodo_activo_id');
-
-        $asignacionesQuery = DB::table('asigna_grupo')
-            ->join('comunidades', 'asigna_grupo.comunidad_id', '=', 'comunidades.id')
-            ->join('grupos', 'asigna_grupo.grupo_id', '=', 'grupos.id')
-            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
-            ->join('periodos', 'asigna_grupo.periodo_id', '=', 'periodos.id')
-            ->join('users', 'asigna_grupo.catequista_id', '=', 'users.id')
-            ->where('asigna_grupo.catequista_id', $catequistaId)
-            ->where('asigna_grupo.periodo_id', $periodoActivoId)
-            ->whereNull('asigna_grupo.deleted_at')
-            ->whereNull('comunidades.deleted_at')
-            ->whereNull('grupos.deleted_at')
-            ->whereNull('niveles.deleted_at')
-            ->whereNull('periodos.deleted_at')
-            ->select(
-                'asigna_grupo.id as asignacion_id',
-                'asigna_grupo.grupo_id',
-                'asigna_grupo.periodo_id',
-                'comunidades.comunidad',
-                'grupos.nombre as grupo',
-                'niveles.nivel',
-                'users.name as catequista_nombre',
-                DB::raw("CONCAT(periodos.fecha_inicio, ' al ', periodos.fecha_fin) as periodo"),
-                DB::raw("CONCAT(niveles.nivel, ' - Grupo ', grupos.nombre, ' (', comunidades.comunidad, ')') as texto_asignacion")
-            );
-
-        $asignaciones = $asignacionesQuery->get();
-
-        $asignacionId = request('asignacion_id');
-
-        if ($asignacionId) {
-            $asignacion = $asignaciones->firstWhere(
-                'asignacion_id',
-                (int) $asignacionId
-            );
-        } else {
-            $asignacion = $asignaciones->first();
-
-            $asignacionId = $asignacion
-                ? $asignacion->asignacion_id
-                : null;
-        }
-
-        $alumnos = collect();
-
-        if ($asignacion) {
-            $alumnos = DB::table('inscripciones')
-                ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
-                ->where('inscripciones.grupo_id', $asignacion->grupo_id)
-                ->where('inscripciones.periodo_id', $asignacion->periodo_id)
-                ->whereNull('inscripciones.deleted_at')
-                ->whereNull('alumnos.deleted_at')
-                ->select(
-                    'alumnos.id',
-                    DB::raw("
-                        TRIM(
-                            CONCAT(
-                                alumnos.nombre,
-                                ' ',
-                                alumnos.apellido_paterno,
-                                ' ',
-                                COALESCE(alumnos.apellido_materno, '')
-                            )
-                        ) as alumno
-                    ")
-                )
-                ->groupBy(
-                    'alumnos.id',
-                    'alumnos.nombre',
-                    'alumnos.apellido_paterno',
-                    'alumnos.apellido_materno'
-                )
-                ->orderBy('alumnos.apellido_paterno')
-                ->orderBy('alumnos.apellido_materno')
-                ->orderBy('alumnos.nombre')
-                ->get();
-        }
-
-        return view('catequista.mi_grupo', compact(
-            'asignaciones',
-            'asignacionId',
-            'asignacion',
-            'alumnos'
-        ));
+        return view('catequista.mi_grupo', $this->data($request, C::ViewGroupStudents));
     }
 
-    public function exportarAsistenciaPdf()
+    public function exportarAsistenciaPdf(Request $request)
     {
-        $catequistaId = auth()->id();
-        $periodoActivoId = session('periodo_activo_id');
+        $data = $this->data($request, C::ViewAttendanceList);
+        abort_unless($data['asignacion'], 409, 'Selecciona una asignación para generar la lista.');
 
-        if (!$periodoActivoId) {
-            return back()
-                ->with('error', 'No hay un periodo activo seleccionado.');
-        }
+        return Pdf::loadView('catequista.pdf.asistencia', $data)->setPaper('letter', 'landscape')
+            ->download('lista_asistencia_catequesis.pdf');
+    }
 
-        $asignacionesQuery = DB::table('asigna_grupo')
-            ->join('comunidades', 'asigna_grupo.comunidad_id', '=', 'comunidades.id')
-            ->join('grupos', 'asigna_grupo.grupo_id', '=', 'grupos.id')
-            ->join('niveles', 'asigna_grupo.nivel_id', '=', 'niveles.id')
-            ->join('periodos', 'asigna_grupo.periodo_id', '=', 'periodos.id')
-            ->join('users', 'asigna_grupo.catequista_id', '=', 'users.id')
-            ->where('asigna_grupo.catequista_id', $catequistaId)
-            ->where('asigna_grupo.periodo_id', $periodoActivoId)
-            ->whereNull('asigna_grupo.deleted_at')
-            ->whereNull('comunidades.deleted_at')
-            ->whereNull('grupos.deleted_at')
-            ->whereNull('niveles.deleted_at')
-            ->whereNull('periodos.deleted_at')
-            ->select(
-                'asigna_grupo.id as asignacion_id',
-                'asigna_grupo.grupo_id',
-                'asigna_grupo.periodo_id',
-                'comunidades.comunidad',
-                'grupos.nombre as grupo',
-                'niveles.nivel',
-                'users.name as catequista_nombre',
-                DB::raw("CONCAT(periodos.fecha_inicio, ' al ', periodos.fecha_fin) as periodo")
-            );
-
-        $asignaciones = $asignacionesQuery->get();
-
-        $asignacionId = request('asignacion_id');
-
+    private function data(Request $request, C $capability): array
+    {
+        $request->validate(['asignacion_id' => ['nullable', 'integer', 'min:1']]);
+        $http = app(CatequesisHttp::class);
+        $context = $http->context($request, $capability);
+        $asignaciones = app(AccessibleAsignaciones::class)->for($context)
+            ->with(['comunidad', 'grupo', 'nivel', 'periodo', 'catequista'])->get()
+            ->map(fn ($a) => (object) [
+                'asignacion_id' => $a->id, 'grupo_id' => $a->grupo_id, 'periodo_id' => $a->periodo_id,
+                'comunidad' => $a->comunidad->comunidad, 'grupo' => $a->grupo->nombre,
+                'nivel' => $a->nivel->nivel, 'catequista_nombre' => $a->catequista->name,
+                'periodo' => $a->periodo->fecha_inicio->format('Y-m-d').' al '.$a->periodo->fecha_fin->format('Y-m-d'),
+                'texto_asignacion' => $a->nivel->nivel.' - Grupo '.$a->grupo->nombre.' ('.$a->comunidad->comunidad.')',
+            ]);
+        $asignacionId = $request->integer('asignacion_id') ?: ($asignaciones->count() === 1 ? $asignaciones->sole()->asignacion_id : null);
+        $asignacion = null;
+        $alumnos = collect();
         if ($asignacionId) {
-            $asignacion = $asignaciones->firstWhere(
-                'asignacion_id',
-                (int) $asignacionId
-            );
-        } else {
-            $asignacion = $asignaciones->first();
+            $http->enforce(app(CatequesisAccess::class)->canUseAsignacion($context, $asignacionId));
+            $asignacion = $asignaciones->where('asignacion_id', $asignacionId)->sole();
+            $inscripciones = app(AccessibleInscripciones::class)->for($context)->where('grupo_id', $asignacion->grupo_id);
+            $alumnos = app(AccessibleAlumnos::class)->for($context)->whereIn('alumnos.id', $inscripciones->select('alumno_id'))
+                ->orderBy('apellido_paterno')->orderBy('apellido_materno')->orderBy('nombre')->get()
+                ->map(fn ($a) => (object) ['id' => $a->id, 'alumno' => $a->nombre_completo]);
         }
 
-        if (!$asignacion) {
-            return back()
-                ->with('error', 'No tienes un grupo asignado para este periodo.');
-        }
-
-        $alumnos = DB::table('inscripciones')
-            ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
-            ->where('inscripciones.grupo_id', $asignacion->grupo_id)
-            ->where('inscripciones.periodo_id', $asignacion->periodo_id)
-            ->whereNull('inscripciones.deleted_at')
-            ->whereNull('alumnos.deleted_at')
-            ->select(
-                DB::raw("
-                    TRIM(
-                        CONCAT(
-                            alumnos.apellido_paterno,
-                            ' ',
-                            COALESCE(alumnos.apellido_materno, ''),
-                            ' ',
-                            alumnos.nombre
-                        )
-                    ) as alumno
-                ")
-            )
-            ->orderBy('alumnos.apellido_paterno')
-            ->orderBy('alumnos.apellido_materno')
-            ->orderBy('alumnos.nombre')
-            ->get();
-
-        $pdf = Pdf::loadView(
-            'catequista.pdf.asistencia',
-            compact('asignacion', 'alumnos')
-        )->setPaper('letter', 'landscape');
-
-        return $pdf->download('lista_asistencia_catequesis.pdf');
+        return compact('asignaciones', 'asignacionId', 'asignacion', 'alumnos');
     }
 }

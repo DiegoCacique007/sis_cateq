@@ -216,22 +216,8 @@
         <div class="reporte-grid">
             @forelse($registros as $alumno)
                 @php
-                    $inscripcion = $alumno->inscripciones->first();
-
-                    $nivelObj = null;
-
-                    if ($inscripcion && isset($inscripcion->asignaGrupo) && $inscripcion->asignaGrupo) {
-                        $nivelObj = $inscripcion->asignaGrupo->nivel ?? null;
-                    }
-
-                    if (!$nivelObj && $inscripcion && $inscripcion->grupo && $inscripcion->grupo->asignacionesGrupo) {
-                        $asignacion = $inscripcion->grupo->asignacionesGrupo
-                            ->where('periodo_id', $inscripcion->periodo_id)
-                            ->first();
-
-                        $nivelObj = $asignacion ? $asignacion->nivel : null;
-                    }
-
+                    $inscripcion = $alumno->inscripciones->count() === 1 ? $alumno->inscripciones->sole() : null;
+                    $nivelObj = $inscripcion?->asignaGrupo?->nivel;
                     $sacramentoTexto = $nivelObj && $nivelObj->sacramento
                         ? str_replace('_', ' ', $nivelObj->sacramento)
                         : null;

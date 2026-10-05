@@ -294,6 +294,10 @@
 
 <div class="page-wrapper">
 
+    @if (session('error'))
+        <div class="alert alert-warning" role="alert">{{ session('error') }}</div>
+    @endif
+
     <div class="top-actions">
         @if (Route::has('login'))
             @auth

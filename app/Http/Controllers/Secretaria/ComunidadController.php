@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Secretaria;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Comunidad;
+use App\Queries\AccessibleComunidades;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -11,14 +14,15 @@ class ComunidadController extends Controller
 {
     public function index(Request $request)
     {
+        $context = app(CatequesisHttp::class)->context($request, C::ViewCommunities);
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 25);
 
-        if (!in_array($perPage, [10, 25, 50, 100])) {
+        if (! in_array($perPage, [10, 25, 50, 100])) {
             $perPage = 25;
         }
 
-        $registros = Comunidad::query()
+        $registros = app(AccessibleComunidades::class)->for($context)
             ->when($search !== '', function ($query) use ($search) {
                 $query->where('comunidad', 'LIKE', "%{$search}%");
             })
