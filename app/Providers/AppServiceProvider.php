@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -12,7 +12,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(\App\Services\Chatbot\Contracts\IntentResolver::class, \App\Services\Chatbot\Intent\RuleBasedIntentResolver::class);
     }
 
     /**
@@ -21,11 +21,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+        \Illuminate\Support\Facades\RateLimiter::for('chatbot', fn (\Illuminate\Http\Request $request) => \Illuminate\Cache\RateLimiting\Limit::perMinute(30)->by('chatbot:'.$request->user()->getAuthIdentifier()));
 
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
             if (auth()->check()) {
                 $role = auth()->user()->role;
-                $layout = match($role) {
+                $layout = match ($role) {
                     'parroco' => 'layouts.app_parroquia_parroco',
                     'coordinador_general' => 'layouts.app_parroquia_coordinador_general',
                     'coordinador_comunidades' => 'layouts.app_parroquia_coordinador_comunidades',
@@ -33,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
                     default => 'layouts.app_parroquia_admin'
                 };
                 $view->with('layout_role', $layout);
-                $view->with('route_prefix', $role . '.');
+                $view->with('route_prefix', $role.'.');
             }
         });
     }

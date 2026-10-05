@@ -1,42 +1,39 @@
 <?php
 
 use App\Enums\UserRole;
-use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Catequista\CatequistaController;
 // Secretaría
-use App\Http\Controllers\Secretaria\DashboardController;
-use App\Http\Controllers\Secretaria\AlumnoController;
+use App\Http\Controllers\Catequista\EvaluacionController as CatequistaEvaluacionController;
+use App\Http\Controllers\Catequista\MiGrupoController;
+use App\Http\Controllers\CoordComunidad\CoordComunidadController;
+use App\Http\Controllers\CoordGeneral\CoordGeneralController;
+use App\Http\Controllers\Parroco\ParrocoController;
 use App\Http\Controllers\Secretaria\AlumnoComunidadController;
+use App\Http\Controllers\Secretaria\AlumnoController;
 use App\Http\Controllers\Secretaria\AsignaGrupoController;
 use App\Http\Controllers\Secretaria\BoletaController;
 use App\Http\Controllers\Secretaria\ComunidadController;
+use App\Http\Controllers\Secretaria\DashboardController;
 use App\Http\Controllers\Secretaria\EvaluacionController;
 use App\Http\Controllers\Secretaria\GrupoController;
 use App\Http\Controllers\Secretaria\InscripcionController;
 use App\Http\Controllers\Secretaria\NivelController;
+// Catequista
 use App\Http\Controllers\Secretaria\PeriodoController;
 use App\Http\Controllers\Secretaria\RubroController;
 use App\Http\Controllers\Secretaria\TutorController;
-use App\Http\Controllers\Secretaria\UnidadController;
-use App\Http\Controllers\Secretaria\UsuariosPendientesController;
-
-// Catequista
-use App\Http\Controllers\Catequista\CatequistaController;
-use App\Http\Controllers\Catequista\EvaluacionController as CatequistaEvaluacionController;
-use App\Http\Controllers\Catequista\MiGrupoController;
-
 // Párroco
-use App\Http\Controllers\Parroco\ParrocoController;
-
+use App\Http\Controllers\Secretaria\UnidadController;
 // Coordinador General
-use App\Http\Controllers\CoordGeneral\CoordGeneralController;
-
+use App\Http\Controllers\Secretaria\UsuariosPendientesController;
 // Coordinador de Comunidades
-use App\Http\Controllers\CoordComunidad\CoordComunidadController;
-
-
+use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('welcome');
+
+Route::post('/chatbot/message', \App\Http\Controllers\ChatbotController::class)
+    ->middleware(['auth', 'approved', 'throttle:chatbot', \App\Http\Middleware\NoCacheHeaders::class])
+    ->name('chatbot.message');
 
 // ==========================================
 // RUTAS GENERALES PROTEGIDAS
@@ -77,7 +74,7 @@ Route::middleware(['auth', 'approved', \App\Http\Middleware\NoCacheHeaders::clas
 // ==========================================
 // SECRETARÍA - ADMIN TOTAL (CRUD completo)
 // ==========================================
-Route::middleware(['auth', 'approved', 'role:' . UserRole::Secretaria->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])->prefix('secretaria')->name('secretaria.')->group(function () {
+Route::middleware(['auth', 'approved', 'role:'.UserRole::Secretaria->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])->prefix('secretaria')->name('secretaria.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/usuarios/pendientes', [UsuariosPendientesController::class, 'index'])->name('usuarios.pendientes');
@@ -99,8 +96,6 @@ Route::middleware(['auth', 'approved', 'role:' . UserRole::Secretaria->value, \A
     Route::post('/evaluaciones/guardar-masivo', [EvaluacionController::class, 'guardarMasivo'])->name('evaluaciones.guardarMasivo');
     Route::delete('/evaluaciones/{evaluacion}', [EvaluacionController::class, 'destroy'])->name('evaluaciones.destroy');
 
-
-
     // ── Módulo de Boletas ──
     Route::prefix('boletas')->name('boletas.')->group(function () {
         Route::get('/', [BoletaController::class, 'index'])->name('index');
@@ -111,7 +106,7 @@ Route::middleware(['auth', 'approved', 'role:' . UserRole::Secretaria->value, \A
 // ==========================================
 // CATEQUISTA (UPDATE evaluaciones de su grupo, READ listas propias)
 // ==========================================
-Route::middleware(['auth', 'approved', 'role:' . UserRole::Catequista->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:'.UserRole::Catequista->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('catequista')
     ->name('catequista.')
     ->group(function () {
@@ -127,7 +122,7 @@ Route::middleware(['auth', 'approved', 'role:' . UserRole::Catequista->value, \A
 // ==========================================
 // PÁRROCO - SUPERVISIÓN GENERAL (Solo lectura)
 // ==========================================
-Route::middleware(['auth', 'approved', 'role:' . UserRole::Parroco->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:'.UserRole::Parroco->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('parroco')
     ->name('parroco.')
     ->group(function () {
@@ -144,7 +139,7 @@ Route::middleware(['auth', 'approved', 'role:' . UserRole::Parroco->value, \App\
 // ==========================================
 // COORDINADOR GENERAL - SUPERVISIÓN ACADÉMICA/PASTORAL
 // ==========================================
-Route::middleware(['auth', 'approved', 'role:' . UserRole::CoordinadorGeneral->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:'.UserRole::CoordinadorGeneral->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('coordinador-general')
     ->name('coordinador_general.')
     ->group(function () {
@@ -163,7 +158,7 @@ Route::middleware(['auth', 'approved', 'role:' . UserRole::CoordinadorGeneral->v
 // ==========================================
 // COORDINADOR DE COMUNIDADES - SUPERVISIÓN POR COMUNIDAD
 // ==========================================
-Route::middleware(['auth', 'approved', 'role:' . UserRole::CoordinadorComunidades->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
+Route::middleware(['auth', 'approved', 'role:'.UserRole::CoordinadorComunidades->value, \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
     ->prefix('coordinador-comunidades')
     ->name('coordinador_comunidades.')
     ->group(function () {
@@ -177,4 +172,4 @@ Route::middleware(['auth', 'approved', 'role:' . UserRole::CoordinadorComunidade
         Route::get('/boletas/generar/{inscripcion}', [BoletaController::class, 'generar'])->name('boletas.generar');
     });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

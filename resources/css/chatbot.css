@@ -1,0 +1,22 @@
+.cateq-chat { position:fixed; right:20px; bottom:20px; z-index:1040; display:flex; flex-direction:column-reverse; align-items:flex-end; font:14px/1.5 system-ui,sans-serif; color:#243651; }
+.cateq-chat [hidden] { display:none !important; }
+.cateq-chat button { cursor:pointer; border:0; border-radius:12px; padding:10px 16px; font:inherit; }
+.cateq-chat-launch, .cateq-chat-form button { background:linear-gradient(120deg,#2f7fd3,#1e3a8a); color:white; box-shadow:0 5px 18px #16317230; }
+.cateq-chat-panel { width:390px; max-width:calc(100vw - 24px); height:560px; max-height:calc(100dvh - 100px); background:white; border:1px solid #ccdced; border-radius:18px; box-shadow:0 12px 45px #16317238; display:flex; flex-direction:column; overflow:hidden; margin-bottom:12px; }
+.cateq-chat-panel header { display:flex; align-items:center; justify-content:space-between; background:linear-gradient(120deg,#2f7fd3,#1e3a8a); color:white; padding:14px 18px; }
+.cateq-chat-panel header small { display:block; opacity:.9; }
+.cateq-chat-panel header button { background:transparent; color:white; font-size:25px; padding:0 10px; }
+.cateq-chat-log { flex:1; overflow:auto; padding:14px; background:#f4f8fc; overscroll-behavior:contain; }
+.cateq-chat-message { padding:12px; border-radius:12px; margin-bottom:12px; background:white; border:1px solid #dce7f2; overflow-wrap:anywhere; white-space:pre-wrap; }
+.cateq-chat-message.is-user { background:#e0edfc; margin-left:25px; }
+.cateq-chat-message ul { margin:8px 0; padding-left:20px; white-space:normal; }
+.cateq-chat-message button, .cateq-chat-message a { display:block; margin-top:8px; background:#e4effb; color:#163172; text-align:left; text-decoration:none; border-radius:9px; padding:9px; }
+.cateq-chat-form { padding:12px 14px; border-top:1px solid #dce7f2; }
+.cateq-chat-form label { display:block; font-weight:600; margin-bottom:5px; }
+.cateq-chat-form div { display:flex; gap:8px; }
+.cateq-chat-form input { min-width:0; width:100%; border:1px solid #bbcde0; border-radius:10px; padding:10px; font:inherit; }
+.cateq-chat-form small { display:block; margin-top:7px; color:#596b80; }
+.cateq-chat [data-progress] { padding:5px 16px; margin:0; color:#1e3a8a; }
+.cateq-chat button:disabled { opacity:.55; cursor:wait; }
+.cateq-chat :focus-visible { outline:3px solid #eeb545; outline-offset:2px; }
+@media(max-width:480px) { .cateq-chat { right:12px; bottom:12px; } .cateq-chat-panel { width:calc(100vw - 24px); height:70dvh; } }

@@ -412,5 +412,6 @@
 
 @stack('scripts')
 
+<x-chatbot />
 </body>
 </html>
