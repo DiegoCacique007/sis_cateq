@@ -2,67 +2,41 @@
 
 namespace App\Http\Controllers\Secretaria;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Tutor;
+use App\Queries\AccessibleAlumnos;
+use App\Queries\AccessibleTutores;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class TutorController extends Controller
 {
     public function index(Request $request)
     {
+        $context = app(CatequesisHttp::class)->context($request, C::ViewTutors);
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 25);
-
-        if (!in_array($perPage, [10, 25, 50, 100])) {
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 25;
         }
-
-        $registros = Tutor::query()
+        app(CatequesisHttp::class)->enforce(app(\App\Services\Authorization\CatequesisAccess::class)->can($context, C::ViewGroupStudents));
+        $registros = app(AccessibleTutores::class)->for($context)
             ->leftJoin('alumnos', 'tutores.alumno_id', '=', 'alumnos.id')
-            ->select(
-                'tutores.*',
-                DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre")
-            )
-            ->where(function ($query) {
-                $query->whereHas('alumno.inscripciones', function ($q) {
-                    $q->where('periodo_id', session('periodo_activo_id'));
-                })->orWhereDoesntHave('alumno.inscripciones');
-            })
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('tutores.nombre', 'LIKE', "%{$search}%")
-                        ->orWhere('tutores.ap', 'LIKE', "%{$search}%")
-                        ->orWhere('tutores.am', 'LIKE', "%{$search}%")
-                        ->orWhere('tutores.telefono', 'LIKE', "%{$search}%")
-                        ->orWhere('alumnos.nombre', 'LIKE', "%{$search}%")
-                        ->orWhere('alumnos.apellido_paterno', 'LIKE', "%{$search}%")
-                        ->orWhere('alumnos.apellido_materno', 'LIKE', "%{$search}%");
-                });
-            })
-            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($query) {
-                $query->where('alumnos.comunidad_id', auth()->user()->comunidad_id);
-            })
-            ->orderBy('tutores.nombre')
-            ->orderBy('tutores.ap')
-            ->paginate($perPage);
-
-        $alumnos = DB::table('alumnos')
-            ->whereNull('deleted_at')
-            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($q) {
-                $q->where('comunidad_id', auth()->user()->comunidad_id);
-            })
-            ->select(
-                'id',
-                'nombre',
-                'apellido_paterno',
-                'apellido_materno',
-                DB::raw("TRIM(CONCAT(nombre, ' ', apellido_paterno, ' ', COALESCE(apellido_materno, ''))) as text")
-            )
-            ->orderBy('nombre')
-            ->orderBy('apellido_paterno')
-            ->get();
+            ->select('tutores.*')->with('alumno')
+            ->when($search !== '', fn ($q) => $q->where(fn ($q) => $q
+                ->where('tutores.nombre', 'LIKE', "%{$search}%")
+                ->orWhere('tutores.ap', 'LIKE', "%{$search}%")
+                ->orWhere('tutores.am', 'LIKE', "%{$search}%")
+                ->orWhere('tutores.telefono', 'LIKE', "%{$search}%")
+                ->orWhere('alumnos.nombre', 'LIKE', "%{$search}%")
+                ->orWhere('alumnos.apellido_paterno', 'LIKE', "%{$search}%")
+                ->orWhere('alumnos.apellido_materno', 'LIKE', "%{$search}%")))
+            ->orderBy('tutores.nombre')->orderBy('tutores.ap')->paginate($perPage);
+        $registros->getCollection()->each(fn ($t) => $t->setAttribute('alumno_nombre', $t->alumno?->nombre_completo));
+        $alumnos = app(AccessibleAlumnos::class)->for($context)->orderBy('nombre')->orderBy('apellido_paterno')->get();
+        $alumnos->each(fn ($a) => $a->setAttribute('text', $a->nombre_completo));
 
         return view('secretaria.tutores.index', compact('registros', 'alumnos'));
     }

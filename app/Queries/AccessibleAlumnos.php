@@ -30,4 +30,17 @@ final class AccessibleAlumnos
 
         return $query;
     }
+
+    /** Filtro del listado: inscritos en el periodo de trabajo o todavía sin inscripción. */
+    public function forIndex(AccessContext $context): Builder
+    {
+        $query = $this->for($context);
+        if (! $this->access->can($context, C::ViewGroupStudents)->isAllowed()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereHas('inscripciones', fn (Builder $i) => $i->where('periodo_id', $context->activePeriodId))
+            ->orWhereDoesntHave('inscripciones'));
+    }
 }

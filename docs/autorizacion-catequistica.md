@@ -255,3 +255,123 @@ ausencia de carreras con escritores administrativos que aún no usan el núcleo.
 Quedan pendientes la integridad/índices del esquema real, los escritores restantes
 y la política definitiva de duplicados y datos históricos. No se ha inspeccionado
 ni modificado la base local de producción.
+## Lecturas restantes integradas (fase 4B)
+
+### Análisis y alcance
+
+Se revisaron completas las implementaciones de ParrocoController,
+CoordGeneralController y CatequistaController, además de las rutas GET que
+reutilizan Alumno, Tutor, Inscripcion, Nivel, Grupo, Comunidad y Boleta de Secretaría.
+Se encontraron conteos DB globales, filtros catequista/periodo duplicados,
+comprobaciones locales de roles (incluyendo admin no canónico), compatibilidad
+NULL repetida y filtros comunitarios implementados manualmente.
+
+ParrocoController y CoordGeneralController ahora resuelven contexto y decisiones
+mediante CatequesisHttp y usan las consultas centrales en dashboards y evaluaciones.
+La consulta de catequistas del párroco usa AccessibleCatequistas.
+CatequistaController deriva todos los indicadores de AccessibleAsignaciones,
+AccessibleAlumnos y AccessibleEvaluaciones. No se agregaron rutas ni capacidades.
+
+### Listados y conteos
+
+- AccessibleAlumnos::forIndex encapsula la regla ya existente del listado:
+  alumnos con inscripción del periodo seleccionado o todavía sin inscripciones.
+  Parte de for(context), de modo que nunca reincorpora alumnos fuera del alcance.
+  Los dashboards de párroco y coordinador general usan exactamente forIndex.
+- AccessibleTutores sirve tanto al listado como al indicador del coordinador
+  general. Exige capacidad ViewTutors y alumno autorizado por forIndex; excluye
+  tutores borrados y referencias a alumnos/comunidades no vigentes.
+- AccessibleInscripciones::forIndex exige ViewInscriptions. Secretaría mantiene
+  inscripciones del periodo aunque no tengan asignación inequívoca; exige alumno,
+  grupo y periodo vigentes. El coordinador general usa for(context), excluyendo
+  registros académicamente ambiguos, sin periodo o fuera del contexto.
+- AccessibleNiveles centraliza el catálogo de niveles para Secretaría/coordinador
+  general y su indicador. Es un catálogo general, no registros dependientes de periodo.
+- Los catálogos auxiliares de comunidades, alumnos y grupos parten también de
+  consultas autorizadas. En inscripciones, el selector de grupos ahora se limita
+  al periodo activo y a grupos con periodo NULL, como el listado de grupos; ya no
+  mezcla grupos de otros periodos.
+- La preparación de nombres se hace con relaciones precargadas después de aplicar
+  alcance en SQL. No se filtran permisos con Collection::filter() ni se cargan
+  relaciones por alumno/tutor individual en las vistas.
+
+Los indicadores no recuperan registros globales para filtrarlos después:
+ejecutan count() sobre los mismos Builders autorizados. Las excepciones de negocio
+son explícitas y preexistentes en las etiquetas de las vistas:
+«Inscripciones activas» agrega estado = 1 al conjunto autorizado; «Grupos asignados»
+cuenta asignaciones, no todo el catálogo de grupos sin asignar. Los niveles asignados
+del catequista son distintos nivel_id de sus asignaciones vigentes.
+Una asignación ambigua puede aparecer como opción autorizada y contarse como
+asignación, pero sus alumnos/evaluaciones no se cuentan ni se permite utilizarla.
+
+Los catequistas contables y listables son aprobados con asignación accesible en el
+periodo. El coordinador general conserva ese indicador, ya existente, y el catálogo
+reducido de boletas; no se le agrega un endpoint de catequistas ni una capacidad nueva.
+
+### Diferencias y compatibilidad
+
+Se conservan búsquedas, paginación, nombres de vistas y formularios, así como los
+métodos store/update/destroy. Secretaría conserva alumnos sin inscripción y la
+administración de inscripciones sin asignación; las referencias inválidas o borradas
+no se muestran por las nuevas consultas. Los supervisores siguen sin poder acceder
+a las rutas de escritura de Secretaría.
+
+Los totales pueden disminuir al excluir dependencias borradas, asignaciones
+ambiguas, periodos ajenos o unidades incompatibles. Las evaluaciones con periodo
+NULL conservan la lectura heredada de la inscripción, según fase 3.
+Las evaluaciones de supervisores conservan el filtro de estado 1 o NULL de las
+inscripciones; la boleta permite consultar el resto de evaluaciones autorizadas.
+
+Se mantiene el contrato HTTP de fase 4: 404 fuera de alcance, 409 para asignación
+ambigua, redirección con aviso por contexto faltante. Los filtros del request no
+sustituyen el periodo de sesión. No se modifica AsegurarPeriodoActivo.
+Los index y controladores comunitarios integrados en fase 4 se verificaron mediante
+regresión, sin reescribirlos.
+
+### Matriz actual de integración
+
+«Sí, HTTP» significa que CatequesisHttp llama a AccessContextResolver y
+CatequesisAccess; las consultas también comprueban sus capacidades.
+
+| Controlador / flujo | AccessContext | CatequesisAccess | Accessible utilizados | Pendiente |
+|---|---|---|---|---|
+| Catequista/CatequistaController index | Sí, HTTP | Sí, HTTP | Asignaciones, Alumnos, Evaluaciones | No |
+| Catequista/MiGrupoController index/PDF | Sí, HTTP | Sí | Asignaciones, Inscripciones, Alumnos | No |
+| Catequista/EvaluacionController index/guardar | Sí, HTTP | Sí | Asignaciones, Inscripciones, Evaluaciones | No |
+| Parroco/ParrocoController dashboard/catequistas/evaluaciones | Sí, HTTP | Sí | Alumnos, Comunidades, Catequistas, Asignaciones, Inscripciones, Evaluaciones | No |
+| CoordGeneral/CoordGeneralController dashboard/evaluaciones | Sí, HTTP | Sí | Alumnos, Comunidades, Catequistas, Asignaciones, Inscripciones, Evaluaciones, Tutores, Niveles | No |
+| CoordComunidad/CoordComunidadController dashboard/catequistas/evaluaciones | Sí, HTTP | Sí | Comunidades, Alumnos, Asignaciones, Catequistas, Inscripciones, Evaluaciones | No |
+| Secretaria/AlumnoController index | Sí, HTTP | Sí, HTTP | Alumnos, Comunidades | CRUD |
+| Secretaria/TutorController index | Sí, HTTP | Sí, HTTP | Tutores, Alumnos | CRUD |
+| Secretaria/InscripcionController index | Sí, HTTP | Sí, HTTP | Inscripciones, Alumnos, Grupos | CRUD |
+| Secretaria/NivelController index | Sí, HTTP | Sí, HTTP | Niveles | CRUD |
+| Secretaria/GrupoController index | Sí, HTTP | Sí, HTTP | Grupos | CRUD |
+| Secretaria/ComunidadController index | Sí, HTTP | Sí, HTTP | Comunidades | CRUD |
+| Secretaria/AlumnoComunidadController index | Sí, HTTP | Sí, HTTP | Alumnos, Inscripciones, Asignaciones, Comunidades | No |
+| Secretaria/BoletaController index/generar | Sí, HTTP | Sí | Asignaciones, Inscripciones, Evaluaciones, Catequistas | No |
+| Secretaria/DashboardController | No | No | No | Sí |
+| Secretaria/EvaluacionController | No | No | No | Sí, lectura y escritura |
+| Secretaria/AsignaGrupoController | No | No | No | Sí, index y CRUD |
+| Secretaria/UnidadController | No | No | No | Sí, index y CRUD |
+| Secretaria/RubroController | No | No | No | Sí, index y CRUD |
+| Secretaria/PeriodoController | No | No | No | Sí, index y CRUD |
+| Secretaria/PeriodoActivoController | No | No | No | Sí, cambio de periodo |
+| Secretaria/UsuariosPendientesController | No | No | No | Sí, gestión de cuentas; protegida por fase 1 |
+| Auth, ProfileController y redirección /dashboard | No académico | No académico | No | Fuera de esta integración; Auth mantiene fases 1–2 |
+
+La lista de pendientes de fase 4 queda sustituida por esta matriz. No se afirma
+que todo Secretaría ni toda la aplicación utilicen ya autorización de dominio.
+
+### Pruebas y riesgos
+
+RemainingReadControllersTest comprueba rutas reales y vistas: dashboards contra
+consultas/listados autorizados, lectura del párroco, todos los GET compartidos del
+coordinador general, ausencia de permisos de escritura, consistencia del catequista,
+borrados lógicos, evaluaciones históricas, filtros de periodo manipulados,
+asignaciones ambiguas y conservación del ámbito comunitario y administrativo.
+
+Se reutiliza CatequesisWebTestCase, sin migraciones ni tablas nuevas de producción.
+Siguen pendientes la validación del esquema y rendimiento en MySQL, la corrección
+de datos históricos y la integración de los flujos marcados. Las comprobaciones
+siguen siendo instantáneas por petición y no garantizan sincronización con escritores
+todavía no integrados. No se añade caché, chatbot ni componentes conversacionales.

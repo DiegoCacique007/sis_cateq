@@ -2,66 +2,24 @@
 
 namespace App\Http\Controllers\Catequista;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use App\Http\Support\CatequesisHttp;
+use App\Queries\AccessibleAlumnos;
+use App\Queries\AccessibleAsignaciones;
+use App\Queries\AccessibleEvaluaciones;
+use Illuminate\Http\Request;
 
 class CatequistaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $catequistaId = auth()->id();
-        $periodoActivoId = session('periodo_activo_id');
+        $context = app(CatequesisHttp::class)->context($request, C::ViewGroupStudents);
+        $totalGruposAsignados = app(AccessibleAsignaciones::class)->for($context)->count();
+        $totalAlumnosGrupo = app(AccessibleAlumnos::class)->for($context)->count();
+        $totalNivelesAsignados = app(AccessibleAsignaciones::class)->for($context)->distinct()->count('nivel_id');
+        $totalEvaluacionesRegistradas = app(AccessibleEvaluaciones::class)->for($context)->count();
 
-        $totalGruposAsignados = DB::table('asigna_grupo')
-            ->where('catequista_id', $catequistaId)
-            ->where('periodo_id', $periodoActivoId)
-            ->whereNull('deleted_at')
-            ->count();
-
-        $totalAlumnosGrupo = DB::table('inscripciones')
-            ->join('asigna_grupo', function ($join) {
-                $join->on('inscripciones.grupo_id', '=', 'asigna_grupo.grupo_id')
-                    ->on('inscripciones.periodo_id', '=', 'asigna_grupo.periodo_id');
-            })
-            ->join('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
-            ->where('asigna_grupo.catequista_id', $catequistaId)
-            ->where('inscripciones.periodo_id', $periodoActivoId)
-            ->whereNull('inscripciones.deleted_at')
-            ->whereNull('asigna_grupo.deleted_at')
-            ->whereNull('alumnos.deleted_at')
-            ->distinct()
-            ->count('inscripciones.alumno_id');
-
-        $totalNivelesAsignados = DB::table('asigna_grupo')
-            ->where('catequista_id', $catequistaId)
-            ->where('periodo_id', $periodoActivoId)
-            ->whereNull('deleted_at')
-            ->distinct()
-            ->count('nivel_id');
-
-        $evaluacionesQuery = DB::table('evaluaciones')
-            ->join('inscripciones', 'evaluaciones.inscripcion_id', '=', 'inscripciones.id')
-            ->join('asigna_grupo', function ($join) {
-                $join->on('inscripciones.grupo_id', '=', 'asigna_grupo.grupo_id')
-                    ->on('inscripciones.periodo_id', '=', 'asigna_grupo.periodo_id');
-            })
-            ->where('asigna_grupo.catequista_id', $catequistaId)
-            ->where('inscripciones.periodo_id', $periodoActivoId)
-            ->whereNull('inscripciones.deleted_at')
-            ->whereNull('asigna_grupo.deleted_at');
-
-        if (Schema::hasColumn('evaluaciones', 'deleted_at')) {
-            $evaluacionesQuery->whereNull('evaluaciones.deleted_at');
-        }
-
-        $totalEvaluacionesRegistradas = $evaluacionesQuery->count();
-
-        return view('catequista.dashboard', compact(
-            'totalGruposAsignados',
-            'totalAlumnosGrupo',
-            'totalNivelesAsignados',
-            'totalEvaluacionesRegistradas'
-        ));
+        return view('catequista.dashboard', compact('totalGruposAsignados', 'totalAlumnosGrupo', 'totalNivelesAsignados', 'totalEvaluacionesRegistradas'));
     }
 }

@@ -2,114 +2,62 @@
 
 namespace App\Http\Controllers\Parroco;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Http\Request;
-use App\Models\Secretaria\AsignaGrupo;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Periodo;
-use App\Models\Secretaria\Unidad;
-use App\Models\Secretaria\Inscripcion;
-use App\Models\Secretaria\Evaluacion;
 use App\Models\Secretaria\Rubro;
+use App\Models\Secretaria\Unidad;
+use App\Queries\AccessibleAlumnos;
+use App\Queries\AccessibleAsignaciones;
+use App\Queries\AccessibleCatequistas;
+use App\Queries\AccessibleComunidades;
+use App\Queries\AccessibleEvaluaciones;
+use App\Queries\AccessibleInscripciones;
+use App\Services\Authorization\CatequesisAccess;
+use Illuminate\Http\Request;
 
 class ParrocoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $periodoActivoId = session('periodo_activo_id');
+        $context = app(CatequesisHttp::class)->context($request, C::ViewEvaluations);
+        $totalAlumnos = app(AccessibleAlumnos::class)->forIndex($context)->count();
+        $totalComunidades = app(AccessibleComunidades::class)->for($context)->count();
+        $totalCatequistas = app(AccessibleCatequistas::class)->for($context)->count();
+        $totalEvaluaciones = app(AccessibleEvaluaciones::class)->for($context)->count();
+        $totalGrupos = app(AccessibleAsignaciones::class)->for($context)->count();
+        $totalInscripciones = app(AccessibleInscripciones::class)->for($context)->where('estado', 1)->count();
 
-        $totalAlumnos = DB::table('alumnos')
-            ->whereNull('deleted_at')
-            ->count();
-
-        $totalComunidades = DB::table('comunidades')
-            ->whereNull('deleted_at')
-            ->count();
-
-        $totalCatequistas = DB::table('users')
-            ->where('role', 'catequista')
-            ->where('status', 'aprobado')
-            ->count();
-
-        $totalGrupos = DB::table('asigna_grupo')
-            ->whereNull('deleted_at')
-            ->when($periodoActivoId, function ($q) use ($periodoActivoId) {
-                $q->where('periodo_id', $periodoActivoId);
-            })
-            ->count();
-
-        $totalEvaluaciones = DB::table('evaluaciones')
-            ->whereNull('deleted_at')
-            ->when($periodoActivoId, function ($q) use ($periodoActivoId) {
-                $q->where('periodo_id', $periodoActivoId);
-            })
-            ->count();
-
-        $totalInscripciones = DB::table('inscripciones')
-            ->whereNull('deleted_at')
-            ->when($periodoActivoId && Schema::hasColumn('inscripciones', 'periodo_id'), function ($q) use ($periodoActivoId) {
-                $q->where('periodo_id', $periodoActivoId);
-            })
-            ->when(Schema::hasColumn('inscripciones', 'estado'), function ($q) {
-                $q->where('estado', 1);
-            })
-            ->count();
-
-        return view('Parroco.dashboard', compact(
-            'totalAlumnos',
-            'totalComunidades',
-            'totalCatequistas',
-            'totalGrupos',
-            'totalEvaluaciones',
-            'totalInscripciones'
-        ));
+        return view('Parroco.dashboard', compact('totalAlumnos', 'totalComunidades', 'totalCatequistas', 'totalGrupos', 'totalEvaluaciones', 'totalInscripciones'));
     }
 
-    public function catequistas()
+    public function catequistas(Request $request)
     {
-        $registros = DB::table('users')
-            ->where('role', 'catequista')
-            ->where('status', 'aprobado')
-            ->orderBy('name')
-            ->paginate(25);
+        $context = app(CatequesisHttp::class)->context($request, C::ViewCatechists);
+        $registros = app(AccessibleCatequistas::class)->for($context)->orderBy('name')->paginate(25);
 
         return view('Parroco.catequistas', compact('registros'));
     }
 
     public function evaluaciones(Request $request)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'parroco'])) {
-            abort(403);
-        }
-
-        // 1. Periodo (desde sesión)
-        $periodoId = session('periodo_activo_id');
-        $periodoNombre = session('periodo_activo_nombre');
-        $periodoActivo = Periodo::find($periodoId);
+        $request->validate([
+            'sacramento' => ['nullable', 'string', 'max:255'],
+            'nivel_id' => ['nullable', 'integer', 'min:1'],
+            'asignacion_id' => ['nullable', 'integer', 'min:1'],
+            'unidad_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $http = app(CatequesisHttp::class);
+        $context = $http->context($request, C::ViewEvaluations);
+        $periodoId = $context->activePeriodId;
+        $periodoActivo = Periodo::findOrFail($periodoId);
         $error_periodo = false;
-
-        // Si no hay periodo activo, mandar a la vista sin datos
-        if (!$periodoId) {
-            return view('Parroco.evaluaciones', [
-                'error_periodo' => true,
-                'periodoTexto' => null,
-                'sacramento' => null,
-                'nivelId' => null,
-                'asignacionId' => null,
-                'unidadId' => null,
-                'niveles' => collect(),
-                'asignaciones' => collect(),
-                'unidades' => collect(),
-                'rubros' => collect(),
-                'alumnos' => collect(),
-                'calificacionesMap' => [],
-                'promedios' => []
-            ]);
+        if ($request->filled('asignacion_id')) {
+            $http->enforce(app(CatequesisAccess::class)->canUseAsignacion($context, $request->integer('asignacion_id')));
         }
-
-        $periodoTexto = $periodoActivo 
-            ? ($periodoActivo->fecha_inicio ? \Carbon\Carbon::parse($periodoActivo->fecha_inicio)->format('Y') : '') . ' al ' . ($periodoActivo->fecha_fin ? \Carbon\Carbon::parse($periodoActivo->fecha_fin)->format('Y') : '')
+        $periodoTexto = $periodoActivo
+            ? ($periodoActivo->fecha_inicio ? \Carbon\Carbon::parse($periodoActivo->fecha_inicio)->format('Y') : '').' al '.($periodoActivo->fecha_fin ? \Carbon\Carbon::parse($periodoActivo->fecha_fin)->format('Y') : '')
             : 'Periodo no encontrado';
 
         // 2. Filtros del Request
@@ -121,11 +69,11 @@ class ParrocoController extends Controller
         // 3. Niveles disponibles (dependen de sacramento)
         $niveles = collect();
         if ($sacramento) {
-            $niveles = \App\Models\Secretaria\Nivel::where('sacramento', $sacramento)->orderBy('numero')->get();
+            $niveles = \App\Models\Secretaria\Nivel::whereIn('id', app(AccessibleAsignaciones::class)->for($context)->select('nivel_id'))->where('sacramento', $sacramento)->orderBy('numero')->get();
         }
 
         // 4. Asignaciones disponibles según periodo, sacramento y nivel
-        $asignacionesQuery = AsignaGrupo::with(['comunidad', 'grupo', 'nivel', 'catequista'])
+        $asignacionesQuery = app(AccessibleAsignaciones::class)->for($context)->with(['comunidad', 'grupo', 'nivel', 'catequista'])
             ->where('periodo_id', $periodoId)
             ->whereNull('deleted_at');
 
@@ -134,7 +82,7 @@ class ParrocoController extends Controller
                 $q->where('sacramento', $sacramento);
             });
         }
-        
+
         if ($nivelId) {
             $asignacionesQuery->where('nivel_id', $nivelId);
         }
@@ -144,19 +92,30 @@ class ParrocoController extends Controller
             $grupo = $asig->grupo->nombre ?? 'Sin Grupo';
             $nivel = $asig->nivel->nivel ?? 'Sin Nivel';
             $catequista = $asig->catequista->name ?? 'Sin Catequista';
-            
+
             // Format: Comunidad - Grupo - Sacramento Nivel - Catequista
             $asig->nombre_completo = "{$comunidad} - {$grupo} - {$nivel} - {$catequista}";
+
             return $asig;
         })->sortBy('nombre_completo');
 
+        if ($asignacionId) {
+            abort_unless($asignaciones->contains('id', (int) $asignacionId), 404);
+        }
+        if ($nivelId) {
+            abort_unless(app(AccessibleAsignaciones::class)->for($context)->where('nivel_id', $nivelId)->exists(), 404);
+        }
+        if ($unidadId && $asignacionId) {
+            $selected = $asignaciones->where('id', (int) $asignacionId)->sole();
+            abort_unless(Unidad::whereKey($unidadId)->where('nivel_id', $selected->nivel_id)->exists(), 404);
+        }
         // 5. Unidades (solo si hay nivel seleccionado)
         $unidades = collect();
         if ($nivelId) {
             $unidades = Unidad::where('nivel_id', $nivelId)->orderBy('numero')->get();
         } elseif ($asignacionId) {
             // Fallback: si por alguna razón tiene asignación pero no nivel en el request
-            $asignacionSeleccionada = $asignaciones->firstWhere('id', (int) $asignacionId);
+            $asignacionSeleccionada = $asignaciones->where('id', (int) $asignacionId)->sole();
             if ($asignacionSeleccionada) {
                 $unidades = Unidad::where('nivel_id', $asignacionSeleccionada->nivel_id)
                     ->orderBy('numero')
@@ -173,17 +132,13 @@ class ParrocoController extends Controller
         $promedios = [];
 
         if ($sacramento && $nivelId && $asignacionId && $unidadId) {
-            $asignacionSel = $asignaciones->firstWhere('id', (int) $asignacionId);
+            $asignacionSel = $asignaciones->where('id', (int) $asignacionId)->sole();
             $grupoId = $asignacionSel ? $asignacionSel->grupo_id : null;
 
             if ($grupoId) {
-                $inscripciones = Inscripcion::with(['alumno', 'grupo'])
+                $inscripciones = app(AccessibleInscripciones::class)->for($context)->with(['alumno', 'grupo'])
                     ->where('grupo_id', $grupoId)
-                    ->where(function ($q) use ($periodoId) {
-                        $q->where('periodo_id', $periodoId)
-                          ->orWhereNull('periodo_id');
-                    })
-                    ->where(function($q) {
+                    ->where(function ($q) {
                         $q->where('estado', 1)->orWhereNull('estado');
                     })
                     ->whereNull('deleted_at')
@@ -191,12 +146,8 @@ class ParrocoController extends Controller
 
                 $inscripcionesIds = $inscripciones->pluck('id')->toArray();
 
-                $evaluaciones = Evaluacion::whereIn('inscripcion_id', $inscripcionesIds)
+                $evaluaciones = app(AccessibleEvaluaciones::class)->for($context)->whereIn('inscripcion_id', $inscripcionesIds)
                     ->where('unidad_id', $unidadId)
-                    ->where(function ($q) use ($periodoId) {
-                        $q->where('periodo_id', $periodoId)
-                          ->orWhereNull('periodo_id');
-                    })
                     ->get();
 
                 foreach ($evaluaciones as $eval) {
@@ -206,7 +157,7 @@ class ParrocoController extends Controller
                 foreach ($inscripciones as $inscripcion) {
                     $inscripcionId = $inscripcion->id;
                     $alumnoCalifs = $calificacionesMap[$inscripcionId] ?? [];
-                    
+
                     if (count($alumnoCalifs) > 0 && $totalRubros > 0) {
                         $suma = array_sum($alumnoCalifs);
                         $promedio = ($suma / $totalRubros) * 10;
@@ -216,8 +167,8 @@ class ParrocoController extends Controller
                     }
                 }
 
-                $alumnos = $inscripciones->sortBy(function($inscripcion) {
-                    return $inscripcion->alumno->nombre . ' ' . $inscripcion->alumno->apellido_paterno;
+                $alumnos = $inscripciones->sortBy(function ($inscripcion) {
+                    return $inscripcion->alumno->nombre.' '.$inscripcion->alumno->apellido_paterno;
                 });
             }
         }

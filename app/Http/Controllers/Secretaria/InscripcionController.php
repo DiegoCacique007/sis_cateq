@@ -2,77 +2,43 @@
 
 namespace App\Http\Controllers\Secretaria;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Inscripcion;
+use App\Queries\AccessibleAlumnos;
+use App\Queries\AccessibleGrupos;
+use App\Queries\AccessibleInscripciones;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class InscripcionController extends Controller
 {
     public function index(Request $request)
     {
+        $context = app(CatequesisHttp::class)->context($request, C::ViewInscriptions);
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 25);
-
-        if (!in_array($perPage, [10, 25, 50, 100])) {
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 25;
         }
-
-        $periodoActivoId = session('periodo_activo_id');
-
-        $registros = Inscripcion::query()
+        app(CatequesisHttp::class)->enforce(app(\App\Services\Authorization\CatequesisAccess::class)->can($context, C::ViewGroupStudents));
+        $registros = app(AccessibleInscripciones::class)->forIndex($context)
             ->leftJoin('alumnos', 'inscripciones.alumno_id', '=', 'alumnos.id')
             ->leftJoin('grupos', 'inscripciones.grupo_id', '=', 'grupos.id')
-            ->select(
-                'inscripciones.*',
-                DB::raw("TRIM(CONCAT(alumnos.nombre, ' ', alumnos.apellido_paterno, ' ', COALESCE(alumnos.apellido_materno, ''))) as alumno_nombre"),
-                'grupos.nombre as grupo_nombre'
-            )
-            ->where('inscripciones.periodo_id', $periodoActivoId)
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('alumnos.nombre', 'LIKE', "%{$search}%")
-                        ->orWhere('alumnos.apellido_paterno', 'LIKE', "%{$search}%")
-                        ->orWhere('alumnos.apellido_materno', 'LIKE', "%{$search}%")
-                        ->orWhere('grupos.nombre', 'LIKE', "%{$search}%");
-                });
-            })
-            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($query) {
-                $query->where('alumnos.comunidad_id', auth()->user()->comunidad_id);
-            })
-            ->orderBy('alumnos.nombre')
-            ->orderBy('alumnos.apellido_paterno')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->select('inscripciones.*', 'grupos.nombre as grupo_nombre')->with('alumno')
+            ->when($search !== '', fn ($q) => $q->where(fn ($q) => $q
+                ->where('alumnos.nombre', 'LIKE', "%{$search}%")
+                ->orWhere('alumnos.apellido_paterno', 'LIKE', "%{$search}%")
+                ->orWhere('alumnos.apellido_materno', 'LIKE', "%{$search}%")
+                ->orWhere('grupos.nombre', 'LIKE', "%{$search}%")))
+            ->orderBy('alumnos.nombre')->orderBy('alumnos.apellido_paterno')->paginate($perPage)->withQueryString();
+        $registros->getCollection()->each(fn ($i) => $i->setAttribute('alumno_nombre', $i->alumno?->nombre_completo));
+        $alumnos = app(AccessibleAlumnos::class)->for($context)->orderBy('nombre')->orderBy('apellido_paterno')->get();
+        $alumnos->each(fn ($a) => $a->setAttribute('text', $a->nombre_completo));
+        $grupos = app(AccessibleGrupos::class)->for($context)->orderBy('nombre')->get();
 
-        $alumnos = DB::table('alumnos')
-            ->whereNull('deleted_at')
-            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($q) {
-                $q->where('comunidad_id', auth()->user()->comunidad_id);
-            })
-            ->select(
-                'id',
-                'nombre',
-                'apellido_paterno',
-                'apellido_materno',
-                DB::raw("TRIM(CONCAT(nombre, ' ', apellido_paterno, ' ', COALESCE(apellido_materno, ''))) as text")
-            )
-            ->orderBy('nombre')
-            ->orderBy('apellido_paterno')
-            ->get();
-
-        $grupos = DB::table('grupos')
-            ->whereNull('deleted_at')
-            ->select('id', 'nombre')
-            ->orderBy('nombre')
-            ->get();
-
-        return view('secretaria.inscripciones.index', compact(
-            'registros',
-            'alumnos',
-            'grupos'
-        ));
+        return view('secretaria.inscripciones.index', compact('registros', 'alumnos', 'grupos'));
     }
 
     public function store(Request $request)
@@ -82,7 +48,7 @@ class InscripcionController extends Controller
         $validated = $request->validate([
             'alumno_id' => [
                 'required',
-                'exists:alumnos,id'
+                'exists:alumnos,id',
             ],
 
             'grupo_id' => [
@@ -122,7 +88,7 @@ class InscripcionController extends Controller
         $validated = $request->validate([
             'alumno_id' => [
                 'required',
-                'exists:alumnos,id'
+                'exists:alumnos,id',
             ],
 
             'grupo_id' => [

@@ -18,13 +18,25 @@ final class AccessibleInscripciones
         return $this->candidates($context)->where($this->assignmentCount(), '=', 1);
     }
 
+    /** Secretaría conserva administración de inscripciones sin asignación; supervisión usa el alcance académico. */
+    public function forIndex(AccessContext $context): Builder
+    {
+        if (! $this->access->can($context, C::ViewInscriptions)->isAllowed()) {
+            return Inscripcion::query()->whereRaw('1 = 0');
+        }
+
+        return $context->role === R::Secretaria
+            ? $this->forStudentReport($context)->whereHas('grupo')->whereIn('inscripciones.alumno_id', app(AccessibleAlumnos::class)->for($context)->select('alumnos.id'))
+            : $this->for($context);
+    }
+
     /** El reporte administrativo conserva alumnos sin asignación inequívoca, sin inferir nivel. */
     public function forStudentReport(AccessContext $context): Builder
     {
         if ($context->role !== R::Secretaria) {
             return $this->for($context);
         }
-        $query = Inscripcion::query()->where('periodo_id', $context->activePeriodId)->whereHas('alumno')->whereHas('periodo');
+        $query = Inscripcion::query()->where('inscripciones.periodo_id', $context->activePeriodId)->whereHas('alumno')->whereHas('periodo');
 
         return $this->access->can($context, C::ViewGroupStudents)->isAllowed() ? $query : $query->whereRaw('1=0');
     }

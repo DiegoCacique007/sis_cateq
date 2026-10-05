@@ -2,55 +2,37 @@
 
 namespace App\Http\Controllers\Secretaria;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Alumno;
+use App\Queries\AccessibleAlumnos;
+use App\Queries\AccessibleComunidades;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AlumnoController extends Controller
 {
     public function index(Request $request)
     {
+        $context = app(CatequesisHttp::class)->context($request, C::ViewStudents);
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 25);
-
-        if (!in_array($perPage, [10, 25, 50, 100])) {
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 25;
         }
-
-        $registros = Alumno::query()
+        app(CatequesisHttp::class)->enforce(app(\App\Services\Authorization\CatequesisAccess::class)->can($context, C::ViewGroupStudents));
+        $registros = app(AccessibleAlumnos::class)->forIndex($context)
             ->leftJoin('comunidades', 'alumnos.comunidad_id', '=', 'comunidades.id')
-            ->select(
-                'alumnos.*',
-                'comunidades.comunidad as comunidad_nombre'
-            )
-            ->where(function ($query) {
-                $query->whereHas('inscripciones', function ($q) {
-                    $q->where('periodo_id', session('periodo_activo_id'));
-                })->orWhereDoesntHave('inscripciones');
-            })
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('alumnos.nombre', 'LIKE', "%{$search}%")
-                        ->orWhere('alumnos.apellido_paterno', 'LIKE', "%{$search}%")
-                        ->orWhere('alumnos.apellido_materno', 'LIKE', "%{$search}%")
-                        ->orWhere('comunidades.comunidad', 'LIKE', "%{$search}%");
-                });
-            })
-            ->when(auth()->check() && auth()->user()->role === 'coordinador_comunidades', function ($query) {
-                $query->where('alumnos.comunidad_id', auth()->user()->comunidad_id);
-            })
-            ->orderBy('alumnos.nombre')
-            ->orderBy('alumnos.apellido_paterno')
-            ->paginate($perPage);
-
-        $comunidades = DB::table('comunidades')
-            ->whereNull('deleted_at')
-            ->select('id', 'comunidad')
-            ->orderBy('comunidad')
-            ->get();
+            ->select('alumnos.*', 'comunidades.comunidad as comunidad_nombre')
+            ->when($search !== '', fn ($q) => $q->where(fn ($q) => $q
+                ->where('alumnos.nombre', 'LIKE', "%{$search}%")
+                ->orWhere('alumnos.apellido_paterno', 'LIKE', "%{$search}%")
+                ->orWhere('alumnos.apellido_materno', 'LIKE', "%{$search}%")
+                ->orWhere('comunidades.comunidad', 'LIKE', "%{$search}%")))
+            ->orderBy('alumnos.nombre')->orderBy('alumnos.apellido_paterno')->paginate($perPage);
+        $comunidades = app(AccessibleComunidades::class)->for($context)->orderBy('comunidad')->get();
 
         return view('secretaria.alumnos.index', compact('registros', 'comunidades'));
     }
@@ -80,7 +62,7 @@ class AlumnoController extends Controller
             'fecha_nacimiento.date' => 'La fecha de nacimiento no es válida.',
         ]);
 
-        if (!empty($validated['fecha_nacimiento'])) {
+        if (! empty($validated['fecha_nacimiento'])) {
             $fechaNacimiento = Carbon::parse($validated['fecha_nacimiento']);
             $hoy = Carbon::now();
 
@@ -132,7 +114,7 @@ class AlumnoController extends Controller
             'fecha_nacimiento.date' => 'La fecha de nacimiento no es válida.',
         ]);
 
-        if (!empty($validated['fecha_nacimiento'])) {
+        if (! empty($validated['fecha_nacimiento'])) {
             $fechaNacimiento = Carbon::parse($validated['fecha_nacimiento']);
             $hoy = Carbon::now();
 

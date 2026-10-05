@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Secretaria;
 
+use App\Enums\CatequesisCapability as C;
 use App\Http\Controllers\Controller;
+use App\Http\Support\CatequesisHttp;
 use App\Models\Secretaria\Nivel;
+use App\Queries\AccessibleNiveles;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -11,19 +14,15 @@ class NivelController extends Controller
 {
     public function index(Request $request)
     {
+        $context = app(CatequesisHttp::class)->context($request, C::ViewLevels);
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 25);
-
-        if (!in_array($perPage, [10, 25, 50, 100])) {
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 25;
         }
-
-        $registros = Nivel::query()
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where('nivel', 'LIKE', "%{$search}%");
-            })
-            ->orderBy('nivel')
-            ->paginate($perPage);
+        $registros = app(AccessibleNiveles::class)->for($context)
+            ->when($search !== '', fn ($q) => $q->where('nivel', 'LIKE', "%{$search}%"))
+            ->orderBy('nivel')->paginate($perPage);
 
         return view('secretaria.niveles.index', compact('registros'));
     }
