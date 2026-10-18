@@ -16,19 +16,21 @@ final class IntentPatternCatalog
         $how = '(?:como(?: puedo| se| debo)?|ayuda para|ayudame a)';
         $read = '(?:ver|veo|consultar|consulto|muestrame|mostrar|ensename)';
         $manage = '(?:administrar|administro|gestionar|gestiono|manejar|manejo|crear|creo|registrar|registro|agregar|agrego)';
+        // Reporte de problema («no me aparecen…», «no encuentro…»): se atiende como la consulta.
+        $report = '(?:aparece|aparecen|sale|salen|carga|cargan|muestra|muestran|encuentro|localizo)';
         $gap = '(?:\s+(?:un|una|el|la|los|las|mi|mis|este|esta|de|del|datos|informacion))*\s+';
         $rules = [
             'MOD-STUDENT' => [I::ModifyStudent, 30, "$modify$gap(?:alumno|alumna|alumnos|alumnas)\\b"],
             'MOD-ADMIN' => [I::ModifyAdministrativeData, 30, "$modify$gap(?:administrativ[oa]s?|tutores?|comunidades?|periodos?|niveles?|unidades?|rubros?|usuarios?|grupos?)\\b"],
             'HOW-EVALUATIONS' => [I::HowToRecordEvaluations, 20, "$how\\s+(?:(?:registrar|registro|capturar|capturo|poner|pongo)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)|evaluar\\b)"],
-            'HOW-STUDENT' => [I::HowToRegisterStudent, 20, "$how\\s+$register$gap(?:alumnos?|alumnas?)\\b|\\bdar de alta$gap(?:alumnos?|alumnas?)\\b"],
+            'HOW-STUDENT' => [I::HowToRegisterStudent, 20, "$how\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\bdar de alta(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\b(?:puedo|podemos|logro|deja|dejan|permite)\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b"],
             'HOW-TUTOR' => [I::HowToRegisterTutor, 20, "(?:$how\\s+)?(?:registrar|registro|agregar|agrego)$gap(?:tutor|tutores|tutora|tutoras)\\b"],
             'HOW-INSCRIPTION' => [I::HowToRegisterInscription, 20, "(?:$how\\s+)?(?:inscribir|inscribo)$gap(?:alumnos?|alumnas?)\\b|(?:$how\\s+)?(?:registrar|registro|hacer|hago)$gap(?:inscripcion|inscripciones)\\b"],
             'HOW-ASSIGN' => [I::HowToAssignGroup, 20, "$how\\s+(?:asignar|asigno)$gap(?:catequistas?|grupos?)\\b"],
-            'VIEW-GROUPS' => [I::ViewMyGroups, 10, '\bmis grupos\b|\bque grupos tengo\b|\bgrupos? asignados?\b'],
-            'VIEW-STUDENTS' => [I::ViewGroupStudents, 10, "(?<!de )\\bmis alumnos\\b|\\balumnos de mi grupo\\b|$read$gap(?:alumnos?|alumnas?)\\b|\\blista de alumnos\\b"],
+            'VIEW-GROUPS' => [I::ViewMyGroups, 10, "\\bmis grupos\\b|\\bque grupos tengo\\b|\\bgrupos? asignados?\\b|(?:$read|$report)$gap(?:grupo|grupos)\\b"],
+            'VIEW-STUDENTS' => [I::ViewGroupStudents, 10, "(?<!de )\\bmis alumnos\\b|\\balumnos de mi grupo\\b|(?:$read|$report)$gap(?:alumnos?|alumnas?)\\b|\\blista de alumnos\\b"],
             'VIEW-ATTENDANCE' => [I::ViewAttendanceList, 10, '\b(?:lista|pdf) de asistencia\b|\b(?:consultar|consulto|generar|genera)\s+(?:(?:mi|la)\s+)?asistencia\b'],
-            'VIEW-EVALUATIONS' => [I::ViewEvaluations, 10, "$read$gap(?:calificaciones|evaluaciones|calificacion|evaluacion)\\b|\\bcalificaciones de mis alumnos\\b"],
+            'VIEW-EVALUATIONS' => [I::ViewEvaluations, 10, "(?:$read|$report)$gap(?:calificaciones|evaluaciones|calificacion|evaluacion)\\b|\\bcalificaciones de mis alumnos\\b"],
             'VIEW-BOLETA' => [I::ViewBoleta, 10, "(?:$read|generar|genera|descargar)$gap(?:boleta|boletas)\\b"],
             'HELP' => [I::HelpSystem, 0, '^ayuda$|\bque puedes hacer\b|\bcomo funciona el sistema\b|\bque puedo consultar\b'],
         ];
@@ -51,11 +53,15 @@ final class IntentPatternCatalog
         return $catalog;
     }
 
-    /** Bloqueos conservadores: no convertir ejecución inexistente o negación en consulta. */
+    /** Bloqueos conservadores: no convertir ejecución inexistente o negación en consulta.
+     * «no sé/entiendo/recuerdo cómo» expresa desconocimiento y «no puedo/me deja/me aparecen/encuentro…»
+     * reporta un problema; ninguno es negación. Cualquier otro «no» sigue bloqueando.
+     */
     public function guards(): array
     {
         return [
-            'NEGATED-REQUEST' => '~\b(?:no|nunca|tampoco)\b~u',
+            'NEGATED-REQUEST' => '~\b(?:nunca|tampoco)\b|\bno\b(?!\s+(?:se|sabemos|entiendo|recuerdo)\s+como\b)'
+                .'(?!\s+(?:puedo|podemos|logro|me\s+deja|me\s+dejan|me\s+permite|(?:me\s+)?(?:aparece|aparecen|sale|salen|carga|cargan|muestra|muestran)|encuentro|veo)\b)~u',
             'UNSUPPORTED-ATTENDANCE' => '~\b(?:registra|registrar|registro|captura|capturar|capturo|guarda|guardar|marca|marcar|toma|tomar|pasa|pasar)\b.*\basistencia\b~u',
             'UNSUPPORTED-EVALUATION-WRITE' => '~^(?!.*\b(?:como|ayuda|ayudame)\b).*\b(?:registra|registrar|registro|captura|capturar|capturo|pon|poner|guarda|guardar)\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b~u',
         ];
