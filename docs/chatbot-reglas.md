@@ -359,7 +359,10 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
    muestra(n)», «no encuentro/veo»), que se atiende con la consulta u orientación
    existente; cualquier otro «no» sigue bloqueando;
    UNSUPPORTED-ATTENDANCE detecta captura/registro/guardado de asistencia;
-   UNSUPPORTED-EVALUATION-WRITE detecta captura de evaluaciones sin orientación.
+   UNSUPPORTED-EVALUATION-WRITE detecta captura de evaluaciones sin orientación,
+   salvo el verbo que sigue inmediatamente a «no puedo/podemos/logro/me deja(n)/
+   me permite» («no me deja registrar calificaciones»), que recibe la guía de
+   HOW_TO_RECORD_EVALUATIONS; cualquier otro verbo de escritura sigue bloqueando.
    Una cláusula bloqueada impide una resolución final operativa del mensaje.
 5. Por cláusula, seleccionar todos los patrones de la categoría de mayor prioridad:
    modificación > orientación > consulta > ayuda. No elegir uno por orden del catálogo.

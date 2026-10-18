@@ -22,7 +22,7 @@ final class IntentPatternCatalog
         $rules = [
             'MOD-STUDENT' => [I::ModifyStudent, 30, "$modify$gap(?:alumno|alumna|alumnos|alumnas)\\b"],
             'MOD-ADMIN' => [I::ModifyAdministrativeData, 30, "$modify$gap(?:administrativ[oa]s?|tutores?|comunidades?|periodos?|niveles?|unidades?|rubros?|usuarios?|grupos?)\\b"],
-            'HOW-EVALUATIONS' => [I::HowToRecordEvaluations, 20, "$how\\s+(?:(?:registrar|registro|capturar|capturo|poner|pongo)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)|evaluar\\b)"],
+            'HOW-EVALUATIONS' => [I::HowToRecordEvaluations, 20, "$how\\s+(?:(?:registrar|registro|capturar|capturo|poner|pongo)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)|evaluar\\b)|\\bno\\s+(?:puedo|podemos|logro|me deja|me dejan|me permite)\\s+(?:registrar|capturar|guardar|poner|subir|cargar)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"],
             'HOW-STUDENT' => [I::HowToRegisterStudent, 20, "$how\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\bdar de alta(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\b(?:puedo|podemos|logro|deja|dejan|permite)\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b"],
             'HOW-TUTOR' => [I::HowToRegisterTutor, 20, "(?:$how\\s+)?(?:registrar|registro|agregar|agrego)$gap(?:tutor|tutores|tutora|tutoras)\\b"],
             'HOW-INSCRIPTION' => [I::HowToRegisterInscription, 20, "(?:$how\\s+)?(?:inscribir|inscribo)$gap(?:alumnos?|alumnas?)\\b|(?:$how\\s+)?(?:registrar|registro|hacer|hago)$gap(?:inscripcion|inscripciones)\\b"],
@@ -63,7 +63,8 @@ final class IntentPatternCatalog
             'NEGATED-REQUEST' => '~\b(?:nunca|tampoco)\b|\bno\b(?!\s+(?:se|sabemos|entiendo|recuerdo)\s+como\b)'
                 .'(?!\s+(?:puedo|podemos|logro|me\s+deja|me\s+dejan|me\s+permite|(?:me\s+)?(?:aparece|aparecen|sale|salen|carga|cargan|muestra|muestran)|encuentro|veo)\b)~u',
             'UNSUPPORTED-ATTENDANCE' => '~\b(?:registra|registrar|registro|captura|capturar|capturo|guarda|guardar|marca|marcar|toma|tomar|pasa|pasar)\b.*\basistencia\b~u',
-            'UNSUPPORTED-EVALUATION-WRITE' => '~^(?!.*\b(?:como|ayuda|ayudame)\b).*\b(?:registra|registrar|registro|captura|capturar|capturo|pon|poner|guarda|guardar)\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b~u',
+            // Un reporte («no me deja registrar…») solo exime al verbo que le sigue inmediatamente.
+            'UNSUPPORTED-EVALUATION-WRITE' => '~^(?!.*\b(?:como|ayuda|ayudame)\b).*(?<!no puedo |no podemos |no logro |no me deja |no me dejan |no me permite )\b(?:registra|registrar|registro|captura|capturar|capturo|pon|poner|guarda|guardar)\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b~u',
         ];
     }
 }

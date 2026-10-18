@@ -91,6 +91,15 @@ class RuleBasedIntentResolverTest extends TestCase
             ['No puedo descargar la lista de asistencia', I::ViewAttendanceList],
             ['No puedo descargar la boleta', I::ViewBoleta],
             ['No me deja editar un alumno', I::ModifyStudent],
+            // Reporte inmediatamente antes del verbo de escritura: solo orientación, nunca registro.
+            ['No me deja registrar calificaciones', I::HowToRecordEvaluations],
+            ['No puedo capturar las evaluaciones', I::HowToRecordEvaluations],
+            ['No logro guardar las calificaciones de mi grupo', I::HowToRecordEvaluations],
+            ['no me dejan capturar la evaluación', I::HowToRecordEvaluations],
+            ['no me permite poner calificaciones', I::HowToRecordEvaluations],
+            ['no podemos registrar las evaluaciones', I::HowToRecordEvaluations],
+            ['No puedo subir las calificaciones', I::HowToRecordEvaluations],
+            ['No me deja cargar las evaluaciones', I::HowToRecordEvaluations],
         ];
     }
 
@@ -118,9 +127,29 @@ class RuleBasedIntentResolverTest extends TestCase
             ['no sé cómo, pero no quiero ver alumnos'], ['no se como registra la asistencia'],
             ['no puedo, no quiero ver alumnos'], ['nunca encuentro mi grupo'],
             ['tampoco me aparecen las calificaciones'], ['no puedo no ver mis alumnos'],
-            // Fuera de alcance: lo sigue bloqueando UNSUPPORTED-EVALUATION-WRITE.
-            ['no me deja registrar calificaciones'],
+            // Escritura de calificaciones sin reporte inmediatamente anterior al verbo.
+            ['guarda las calificaciones de mi grupo'], ['pon 9 de calificación a un alumno'],
+            ['no quiero registrar calificaciones'], ['registra las calificaciones, que yo no puedo'],
+            ['no puedo registrar la asistencia'], ['guarda las calificaciones porque no me deja registrar'],
+            ['no puedo hacer el registro de calificaciones'], ['nunca puedo registrar calificaciones'],
+            ['no puedo no registrar calificaciones'], ['no sé si puedo registrar calificaciones'],
+            ['puedo registrar calificaciones'],
         ];
+    }
+
+    public function test_evaluation_write_guard_blocks_verb_not_immediately_after_report(): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve('guarda las calificaciones porque no me deja registrar');
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
+        $this->assertNotContains('NEGATED-REQUEST', $result->matchedPatterns);
+    }
+
+    public function test_cargar_distinguishes_missing_grades_from_recording_problem(): void
+    {
+        $resolver = new RuleBasedIntentResolver;
+        $this->assertSame(I::ViewEvaluations, $resolver->resolve('no me cargan las calificaciones')->intent);
+        $this->assertSame(I::HowToRecordEvaluations, $resolver->resolve('no puedo cargar las calificaciones')->intent);
     }
 
     public function test_group_students_phrasing_is_not_ambiguous_with_singular_group(): void

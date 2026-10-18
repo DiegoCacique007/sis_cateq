@@ -292,6 +292,55 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         $this->assertSame($secretary, str_contains($response->json('message'), 'Acude a Secretaría.'));
     }
 
+    /** [rol, ruta del módulo de evaluaciones del propio rol]. */
+    public static function evaluationRecorders(): array
+    {
+        return [[R::Catequista, '/catequista/evaluaciones'], [R::Secretaria, '/secretaria/evaluaciones']];
+    }
+
+    #[DataProvider('evaluationRecorders')]
+    public function test_grade_recording_problem_gets_guidance_for_own_module(R $role, string $url): void
+    {
+        $this->login($role);
+        foreach (['No me deja registrar calificaciones', 'No puedo capturar las evaluaciones', 'No logro guardar las calificaciones de mi grupo'] as $message) {
+            $this->postJson(route('chatbot.message'), ['message' => $message])
+                ->assertOk()->assertJsonPath('status', 'success')->assertJsonPath('code', 'GUIDANCE_READY')
+                ->assertJsonCount(3, 'data.items')->assertJsonPath('actions.0.type', 'navigate')
+                ->assertJsonPath('actions.0.url', $url);
+        }
+    }
+
+    public static function nonRecorderRoles(): array
+    {
+        return [[R::Parroco], [R::CoordinadorGeneral], [R::CoordinadorComunidades]];
+    }
+
+    #[DataProvider('nonRecorderRoles')]
+    public function test_grade_recording_problem_is_denied_without_secretary_referral(R $role): void
+    {
+        $this->login($role);
+        $response = $this->postJson(route('chatbot.message'), ['message' => 'No me deja registrar calificaciones'])
+            ->assertOk()->assertJsonPath('status', 'denied')->assertJsonPath('code', 'ROLE_NOT_ALLOWED')
+            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+        $this->assertStringNotContainsString('Acude a Secretaría.', $response->json('message'));
+    }
+
+    public function test_grade_recording_problem_without_period_requires_it(): void
+    {
+        $this->login(R::Secretaria);
+        $this->withSession(['periodo_activo_id' => null]);
+        $this->postJson(route('chatbot.message'), ['message' => 'No puedo subir las calificaciones'])
+            ->assertOk()->assertJsonPath('status', 'missing_context')->assertJsonPath('code', 'MISSING_PERIOD');
+    }
+
+    public function test_grade_write_command_stays_unsupported_without_data(): void
+    {
+        $this->login();
+        $this->postJson(route('chatbot.message'), ['message' => 'guarda las calificaciones porque no me deja registrar'])
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
+            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+    }
+
     public function test_parish_priest_can_read_but_cannot_register_student(): void
     {
         $context = $this->login(R::Parroco);
