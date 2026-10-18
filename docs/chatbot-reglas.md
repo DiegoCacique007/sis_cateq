@@ -352,7 +352,12 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
 3. Reconocer elipsis acotadas: «muéstrame alumnos y calificaciones» conserva el
    verbo de consulta; «cómo administro periodos y usuarios» conserva orientación.
    Solo se hereda el prefijo ante un nombre de módulo reconocido, no ante texto libre.
-4. Aplicar guardas locales. NEGATED-REQUEST detecta no/nunca/tampoco;
+4. Aplicar guardas locales. NEGATED-REQUEST detecta no/nunca/tampoco, salvo la
+   expresión de desconocimiento «no sé/sabemos/entiendo/recuerdo cómo», que pide
+   orientación («no sé cómo registrar un alumno»), y el reporte de un problema
+   («no puedo/logro», «no me deja(n)/permite», «no (me) aparece(n)/sale(n)/carga(n)/
+   muestra(n)», «no encuentro/veo»), que se atiende con la consulta u orientación
+   existente; cualquier otro «no» sigue bloqueando;
    UNSUPPORTED-ATTENDANCE detecta captura/registro/guardado de asistencia;
    UNSUPPORTED-EVALUATION-WRITE detecta captura de evaluaciones sin orientación.
    Una cláusula bloqueada impide una resolución final operativa del mensaje.

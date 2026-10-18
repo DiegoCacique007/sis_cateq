@@ -66,6 +66,31 @@ class RuleBasedIntentResolverTest extends TestCase
             ['soy secretaria, cómo registro un alumno', I::HowToRegisterStudent],
             ['soy parroco, cómo registro un alumno', I::HowToRegisterStudent],
             ['ayuda para registrar un alumno', I::HowToRegisterStudent],
+            // Desconocimiento expresado con «no sé cómo»: pide orientación, no niega.
+            ['No sé cómo registrar un alumno', I::HowToRegisterStudent],
+            ['no se como registrar un alumno', I::HowToRegisterStudent],
+            ['No entiendo cómo capturar calificaciones', I::HowToRecordEvaluations],
+            ['no recuerdo cómo asignar un grupo', I::HowToAssignGroup],
+            ['¿Cómo doy de alta a un alumno?', I::HowToRegisterStudent],
+            ['cómo registro a un alumno', I::HowToRegisterStudent],
+            ['No sé cómo dar de alta al alumno', I::HowToRegisterStudent],
+            // Reporte de problema: se atiende con la consulta u orientación existente.
+            ['No puedo ver mis alumnos', I::ViewGroupStudents],
+            ['no me salen mis alumnos', I::ViewGroupStudents],
+            ['no veo a mis alumnos', I::ViewGroupStudents],
+            ['no me aparecen los alumnos', I::ViewGroupStudents],
+            ['No me aparecen las calificaciones', I::ViewEvaluations],
+            ['no me muestra las calificaciones', I::ViewEvaluations],
+            ['no me cargan las evaluaciones', I::ViewEvaluations],
+            ['No encuentro mi grupo', I::ViewMyGroups],
+            ['no logro ver mi grupo', I::ViewMyGroups],
+            ['ver mi grupo', I::ViewMyGroups],
+            ['No me deja registrar un alumno', I::HowToRegisterStudent],
+            ['no me dejan dar de alta a un alumno', I::HowToRegisterStudent],
+            // Efectos aceptados de la misma excepción.
+            ['No puedo descargar la lista de asistencia', I::ViewAttendanceList],
+            ['No puedo descargar la boleta', I::ViewBoleta],
+            ['No me deja editar un alumno', I::ModifyStudent],
         ];
     }
 
@@ -88,7 +113,32 @@ class RuleBasedIntentResolverTest extends TestCase
             ['soy parroco'], ['registra la asistencia'], ['registra la lista de asistencia'],
             ['cómo registrar asistencia'], ['registra calificaciones'], ['no muestres mis alumnos'],
             ['no quiero ver alumnos'], ['ver alumnos y registra asistencia'],
+            ['No quiero consultar alumnos'], ['no sé si quiero ver alumnos'],
+            ['nunca sé cómo registrar un alumno'], ['no sé cómo no ver mis alumnos'],
+            ['no sé cómo, pero no quiero ver alumnos'], ['no se como registra la asistencia'],
+            ['no puedo, no quiero ver alumnos'], ['nunca encuentro mi grupo'],
+            ['tampoco me aparecen las calificaciones'], ['no puedo no ver mis alumnos'],
+            // Fuera de alcance: lo sigue bloqueando UNSUPPORTED-EVALUATION-WRITE.
+            ['no me deja registrar calificaciones'],
         ];
+    }
+
+    public function test_group_students_phrasing_is_not_ambiguous_with_singular_group(): void
+    {
+        foreach (['ver los alumnos de mi grupo', 'quiero ver los alumnos de mi grupo', 'no encuentro los alumnos de mi grupo'] as $message) {
+            $result = (new RuleBasedIntentResolver)->resolve($message);
+            $this->assertFalse($result->ambiguous, $message);
+            $this->assertSame(I::ViewGroupStudents, $result->intent, $message);
+            $this->assertNotContains('VIEW-GROUPS', $result->matchedPatterns, $message);
+        }
+    }
+
+    public function test_real_negation_remains_blocked_as_unsupported(): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve('No quiero consultar alumnos');
+        $this->assertSame(I::Unknown, $result->intent);
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('NEGATED-REQUEST', $result->matchedPatterns);
     }
 
     #[DataProvider('unknownPhrases')]

@@ -183,6 +183,115 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         $this->postJson(route('chatbot.message'), ['message' => '¿Cómo hago una inscripción?'])->assertJsonPath('status', 'success')->assertJsonPath('actions.0.type', 'navigate');
     }
 
+    public function test_unknowing_help_request_reaches_guidance_and_real_negation_does_not(): void
+    {
+        $this->login(R::Secretaria);
+        $this->postJson(route('chatbot.message'), ['message' => 'No sé cómo registrar un alumno'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonPath('code', 'GUIDANCE_READY')
+            ->assertJsonPath('actions.0.type', 'navigate');
+        $this->postJson(route('chatbot.message'), ['message' => '¿Cómo doy de alta a un alumno?'])
+            ->assertOk()->assertJsonPath('code', 'GUIDANCE_READY');
+        $this->postJson(route('chatbot.message'), ['message' => 'No quiero consultar alumnos'])
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
+            ->assertJsonPath('data.items', []);
+    }
+
+    public function test_catechist_reporting_missing_students_gets_own_assignments(): void
+    {
+        $context = $this->login();
+        $own = $this->records($context);
+        $this->records($this->context());
+        $this->postJson(route('chatbot.message'), ['message' => 'No puedo ver mis alumnos'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonCount(1, 'data.options')
+            ->assertJsonPath('data.options.0.id', $own['assignment']);
+    }
+
+    public function test_catechist_without_assignments_in_period_is_told_to_request_review(): void
+    {
+        $context = $this->login();
+        $this->records($context, period: 2);
+        $response = $this->postJson(route('chatbot.message'), ['message' => 'No puedo ver mis alumnos'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonCount(0, 'data.options');
+        $this->assertStringContainsString('Secretaría', $response->json('message'));
+    }
+
+    public function test_secretary_reporting_blocked_registration_gets_guidance(): void
+    {
+        $this->login(R::Secretaria);
+        $this->postJson(route('chatbot.message'), ['message' => 'No me deja registrar un alumno'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonPath('code', 'GUIDANCE_READY')
+            ->assertJsonPath('actions.0.type', 'navigate');
+    }
+
+    public static function supervisorRoles(): array
+    {
+        return [[R::Catequista], [R::Parroco], [R::CoordinadorGeneral], [R::CoordinadorComunidades]];
+    }
+
+    #[DataProvider('supervisorRoles')]
+    public function test_non_secretary_reporting_blocked_registration_is_sent_to_secretary(R $role): void
+    {
+        $this->login($role);
+        $response = $this->postJson(route('chatbot.message'), ['message' => 'No me deja registrar un alumno'])
+            ->assertOk()->assertJsonPath('status', 'denied')->assertJsonPath('code', 'ROLE_NOT_ALLOWED');
+        $this->assertStringContainsString('Acude a Secretaría.', $response->json('message'));
+    }
+
+    public function test_general_coordinator_reporting_missing_grades_gets_selection(): void
+    {
+        $this->login(R::CoordinadorGeneral);
+        $ids = $this->records($this->context());
+        $this->postJson(route('chatbot.message'), ['message' => 'No me aparecen las calificaciones'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonPath('data.options.0.id', $ids['assignment']);
+        $this->postJson(route('chatbot.message'), ['message' => 'No me aparecen las calificaciones', 'assignment_id' => $ids['assignment']])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(1, 'data.items');
+    }
+
+    public function test_community_coordinator_reporting_missing_group_sees_only_own_community(): void
+    {
+        $context = $this->login(R::CoordinadorComunidades);
+        $own = $this->records($context);
+        $foreign = $this->records($context, community: 2);
+        DB::table('grupos')->where('id', $own['group'])->update(['nombre' => 'Grupo propio']);
+        DB::table('grupos')->where('id', $foreign['group'])->update(['nombre' => 'Grupo ajeno']);
+        $this->postJson(route('chatbot.message'), ['message' => 'No encuentro mi grupo'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(1, 'data.items')
+            ->assertSee('Grupo propio')->assertDontSee('Grupo ajeno');
+    }
+
+    /** Efectos aceptados de reconocer «no puedo / no me deja»: [frase, rol, status, code, menciona Secretaría]. */
+    public static function acceptedSideEffects(): array
+    {
+        $attendance = 'No puedo descargar la lista de asistencia';
+        $boleta = 'No puedo descargar la boleta';
+        $edit = 'No me deja editar un alumno';
+        $cases = [
+            [$attendance, R::Catequista, 'selection_required', 'ASSIGNMENT_SELECTION_REQUIRED', false],
+            [$boleta, R::Catequista, 'denied', 'ROLE_NOT_ALLOWED', false],
+            [$edit, R::Catequista, 'denied', 'ROLE_NOT_ALLOWED', true],
+            [$attendance, R::Secretaria, 'denied', 'ROLE_NOT_ALLOWED', false],
+            [$boleta, R::Secretaria, 'missing_context', 'MISSING_RESOURCE', false],
+            [$edit, R::Secretaria, 'unsupported', 'EXECUTION_UNSUPPORTED', false],
+        ];
+        foreach ([R::Parroco, R::CoordinadorGeneral, R::CoordinadorComunidades] as $role) {
+            $cases[] = [$attendance, $role, 'denied', 'ROLE_NOT_ALLOWED', false];
+            $cases[] = [$boleta, $role, 'missing_context', 'MISSING_RESOURCE', false];
+            $cases[] = [$edit, $role, 'denied', 'ROLE_NOT_ALLOWED', true];
+        }
+
+        return $cases;
+    }
+
+    #[DataProvider('acceptedSideEffects')]
+    public function test_problem_report_side_effects_are_intentional(string $message, R $role, string $status, string $code, bool $secretary): void
+    {
+        $context = $this->login($role);
+        $this->records($context);
+        $response = $this->postJson(route('chatbot.message'), ['message' => $message])
+            ->assertOk()->assertJsonPath('status', $status)->assertJsonPath('code', $code)->assertJsonPath('data.items', []);
+        $this->assertSame($secretary, str_contains($response->json('message'), 'Acude a Secretaría.'));
+    }
+
     public function test_parish_priest_can_read_but_cannot_register_student(): void
     {
         $context = $this->login(R::Parroco);
