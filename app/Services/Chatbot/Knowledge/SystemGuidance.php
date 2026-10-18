@@ -13,7 +13,7 @@ final class SystemGuidance
         if ($intent === I::HowToRecordEvaluations) {
             return $role === R::Catequista
                 ? ['route' => 'catequista.evaluaciones.index', 'steps' => [
-                    'Entra a Evaluaciones y selecciona el grupo asignado y la unidad a evaluar.',
+                    'Entra a Evaluaciones y selecciona el grupo asignado y la unidad; si no aparece ningún grupo, revisa el periodo de trabajo o solicita tu asignación a Secretaría.',
                     'Captura lo obtenido y el total posible de cada rubro; la pantalla calcula la calificación.',
                     'Revisa los valores y pulsa Guardar calificaciones en el módulo.',
                 ]]

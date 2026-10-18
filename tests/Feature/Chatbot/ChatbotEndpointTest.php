@@ -506,6 +506,89 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
             ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonPath('data.options.0.id', $own['assignment']);
     }
 
+    /** Matriz frase × rol con el texto exacto: los mensajes nuevos solo llegan al rol que corresponde. */
+    public static function orientedResponses(): array
+    {
+        $denied = 'No tienes acceso a esta solicitud o al recurso seleccionado. Acude a Secretaría.';
+        $edit = 'El asistente no modifica datos. Edita el alumno desde el módulo Alumnos.';
+        $change = 'El asistente no modifica datos. Realiza el cambio desde el módulo correspondiente.';
+        $escalate = 'Esta operación requiere atención en el módulo correspondiente. Acude a Secretaría.';
+        $boleta = 'Las boletas las genera Secretaría. Solicítale la boleta del alumno.';
+        $missing = 'Falta seleccionar un recurso. Realiza la consulta en el módulo correspondiente.';
+        $attendance = 'La asistencia se toma en papel con la lista que cada catequista descarga desde Mi grupo. El sistema no la registra.';
+        $select = 'Selecciona una asignación para continuar.';
+        $grades = 'Las calificaciones las registran el catequista del grupo y Secretaría en el módulo Evaluaciones. Para una corrección, acude a ellos.';
+        $guidance = 'Sigue estos pasos en el módulo del sistema. No realizaré cambios desde el chat.';
+        $supervisors = [R::Parroco, R::CoordinadorGeneral, R::CoordinadorComunidades];
+        $cases = [
+            'editar: secretaria' => ['No me deja editar un alumno', R::Secretaria, 'unsupported', 'EXECUTION_UNSUPPORTED', $edit],
+            'editar: catequista' => ['No me deja editar un alumno', R::Catequista, 'denied', 'ROLE_NOT_ALLOWED', $denied],
+            'escalar: secretaria' => ['quiero corregir información administrativa', R::Secretaria, 'denied', 'ADMINISTRATIVE_EXECUTION_UNSUPPORTED', $change],
+            'escalar: catequista' => ['quiero corregir información administrativa', R::Catequista, 'denied', 'ADMINISTRATIVE_EXECUTION_UNSUPPORTED', $escalate],
+            'boleta: catequista' => ['descargar boleta', R::Catequista, 'denied', 'ROLE_NOT_ALLOWED', $boleta],
+            'boleta: secretaria' => ['descargar boleta', R::Secretaria, 'missing_context', 'MISSING_RESOURCE', $missing],
+            'asistencia: catequista' => ['lista de asistencia', R::Catequista, 'selection_required', 'ASSIGNMENT_SELECTION_REQUIRED', $select],
+            'asistencia: secretaria' => ['lista de asistencia', R::Secretaria, 'denied', 'ROLE_NOT_ALLOWED', $attendance],
+            'calificaciones: catequista' => ['¿Cómo registro calificaciones?', R::Catequista, 'success', 'GUIDANCE_READY', $guidance],
+            'calificaciones: secretaria' => ['¿Cómo registro calificaciones?', R::Secretaria, 'success', 'GUIDANCE_READY', $guidance],
+        ];
+        foreach ($supervisors as $role) {
+            $cases['editar: '.$role->value] = ['No me deja editar un alumno', $role, 'denied', 'ROLE_NOT_ALLOWED', $denied];
+            $cases['escalar: '.$role->value] = ['quiero corregir información administrativa', $role, 'denied', 'ADMINISTRATIVE_EXECUTION_UNSUPPORTED', $escalate];
+            $cases['boleta: '.$role->value] = ['descargar boleta', $role, 'missing_context', 'MISSING_RESOURCE', $missing];
+            $cases['asistencia: '.$role->value] = ['lista de asistencia', $role, 'denied', 'ROLE_NOT_ALLOWED', $attendance];
+            $cases['calificaciones: '.$role->value] = ['¿Cómo registro calificaciones?', $role, 'denied', 'ROLE_NOT_ALLOWED', $grades];
+        }
+
+        return $cases;
+    }
+
+    #[DataProvider('orientedResponses')]
+    public function test_oriented_responses_have_exact_text_per_role(string $message, R $role, string $status, string $code, string $text): void
+    {
+        $context = $this->login($role);
+        $this->records($context);
+        $response = $this->postJson(route('chatbot.message'), ['message' => $message])
+            ->assertOk()->assertJsonPath('status', $status)->assertJsonPath('code', $code)->assertJsonPath('message', $text);
+        if ($status !== 'success' && $status !== 'selection_required') {
+            $this->assertSame([], $response->json('data.items'));
+        }
+        $navigate = array_values(array_filter($response->json('actions'), fn ($a) => $a['type'] === 'navigate'));
+        if ($text === 'El asistente no modifica datos. Edita el alumno desde el módulo Alumnos.') {
+            $this->assertSame([['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => '/secretaria/alumnos']], $navigate);
+        } elseif ($status !== 'success') {
+            $this->assertSame([], $navigate, 'Solo Secretaría recibe enlace en un rechazo o bloqueo.');
+        }
+    }
+
+    public function test_catechist_grade_guidance_first_step_mentions_missing_group(): void
+    {
+        $this->login();
+        $this->postJson(route('chatbot.message'), ['message' => '¿Cómo registro calificaciones?'])->assertOk()
+            ->assertJsonPath('data.items.0', 'Entra a Evaluaciones y selecciona el grupo asignado y la unidad; si no aparece ningún grupo, revisa el periodo de trabajo o solicita tu asignación a Secretaría.')
+            ->assertJsonCount(3, 'data.items');
+    }
+
+    public function test_secretary_grade_guidance_first_step_is_unchanged(): void
+    {
+        $this->login(R::Secretaria);
+        $this->postJson(route('chatbot.message'), ['message' => '¿Cómo registro calificaciones?'])->assertOk()
+            ->assertJsonPath('data.items.0', 'Entra a Evaluaciones y selecciona periodo, grupo y unidad.')
+            ->assertJsonCount(3, 'data.items');
+    }
+
+    public function test_escalation_without_requester_role_keeps_secretary_referral(): void
+    {
+        // Ruta de revalidación (AgentGate) sin rol: conserva el texto y la canalización anteriores.
+        $decision = new \App\Services\Chatbot\Rules\RuleResult(\App\Enums\ChatbotRuleResult::Escalate, 'ADMINISTRATIVE_EXECUTION_UNSUPPORTED', [], recommendedResponsible: 'secretaria');
+        $response = \App\Services\Chatbot\Agents\EscalationAgent::response($decision);
+        $this->assertSame('chatbot.contact_responsible', $response->messageKey);
+        $this->assertSame([['type' => 'contact', 'responsible' => 'secretaria']], $response->suggestedActions);
+        $self = \App\Services\Chatbot\Agents\EscalationAgent::response($decision, R::Secretaria);
+        $this->assertSame('chatbot.change_in_module', $self->messageKey);
+        $this->assertSame([], $self->suggestedActions);
+    }
+
     public function test_parish_priest_can_read_but_cannot_register_student(): void
     {
         $context = $this->login(R::Parroco);
