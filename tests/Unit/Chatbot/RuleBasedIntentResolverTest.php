@@ -100,6 +100,29 @@ class RuleBasedIntentResolverTest extends TestCase
             ['no podemos registrar las evaluaciones', I::HowToRecordEvaluations],
             ['No puedo subir las calificaciones', I::HowToRecordEvaluations],
             ['No me deja cargar las evaluaciones', I::HowToRecordEvaluations],
+            // Preguntas de posibilidad (propias o impersonales), causa y lugar.
+            ['¿Puedo registrar calificaciones?', I::HowToRecordEvaluations],
+            ['puedo registrar calificaciones', I::HowToRecordEvaluations],
+            ['¿Se puede registrar calificaciones?', I::HowToRecordEvaluations],
+            ['¿se pueden capturar evaluaciones?', I::HowToRecordEvaluations],
+            ['¿podemos poner las calificaciones?', I::HowToRecordEvaluations],
+            ['¿Puedo ver mis alumnos?', I::ViewGroupStudents],
+            ['¿Se puede dar de alta a un alumno?', I::HowToRegisterStudent],
+            ['¿Por qué no puedo ver mis alumnos?', I::ViewGroupStudents],
+            ['¿Por qué no veo mis calificaciones?', I::ViewEvaluations],
+            ['¿Por qué no me deja registrar calificaciones?', I::HowToRecordEvaluations],
+            ['¿Dónde registro las calificaciones?', I::HowToRecordEvaluations],
+            ['¿Dónde capturo calificaciones?', I::HowToRecordEvaluations],
+            ['¿Dónde veo mis alumnos?', I::ViewGroupStudents],
+            ['No sé dónde dar de alta a un alumno', I::HowToRegisterStudent],
+            ['no recuerdo dónde registro un alumno', I::HowToRegisterStudent],
+            // «dónde» en las demás guías que comparten $how.
+            ['¿Dónde inscribo a un alumno?', I::HowToRegisterInscription],
+            ['¿Dónde registro un tutor?', I::HowToRegisterTutor],
+            ['¿Dónde asigno un grupo?', I::HowToAssignGroup],
+            ['¿Dónde administro periodos?', I::HowToManagePeriods],
+            ['¿Dónde registro un alumno?', I::HowToRegisterStudent],
+            ['¿dónde puedo crear niveles?', I::HowToManageLevels],
         ];
     }
 
@@ -133,8 +156,33 @@ class RuleBasedIntentResolverTest extends TestCase
             ['no puedo registrar la asistencia'], ['guarda las calificaciones porque no me deja registrar'],
             ['no puedo hacer el registro de calificaciones'], ['nunca puedo registrar calificaciones'],
             ['no puedo no registrar calificaciones'], ['no sé si puedo registrar calificaciones'],
-            ['puedo registrar calificaciones'],
+            // Pedir al chatbot que registre (segunda persona) sigue bloqueado, igual que la asistencia.
+            ['puedes registrar las calificaciones de mi grupo'], ['¿me puedes registrar calificaciones?'],
+            ['¿podrías registrar las calificaciones?'], ['¿por qué no registras las calificaciones?'],
+            ['no quiero ver mis alumnos'], ['¿dónde registro la asistencia?'],
+            ['registra las calificaciones donde falten'], ['guarda las calificaciones porque puedo registrar'],
+            ['no sé dónde, pero no quiero ver alumnos'], ['nunca sé dónde registrar calificaciones'],
         ];
+    }
+
+    public static function botDirectedWrites(): array
+    {
+        return [['puedes registrar las calificaciones de mi grupo'], ['¿me puedes registrar calificaciones?'], ['¿podrías registrar las calificaciones?']];
+    }
+
+    #[DataProvider('botDirectedWrites')]
+    public function test_asking_the_bot_to_record_grades_is_blocked_by_write_guard(string $message): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve($message);
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
+    }
+
+    public function test_where_question_about_attendance_stays_blocked(): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve('¿dónde registro la asistencia?');
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-ATTENDANCE', $result->matchedPatterns);
     }
 
     public function test_evaluation_write_guard_blocks_verb_not_immediately_after_report(): void

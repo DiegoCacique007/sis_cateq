@@ -353,16 +353,19 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
    verbo de consulta; «cómo administro periodos y usuarios» conserva orientación.
    Solo se hereda el prefijo ante un nombre de módulo reconocido, no ante texto libre.
 4. Aplicar guardas locales. NEGATED-REQUEST detecta no/nunca/tampoco, salvo la
-   expresión de desconocimiento «no sé/sabemos/entiendo/recuerdo cómo», que pide
+   expresión de desconocimiento «no sé/sabemos/entiendo/recuerdo cómo/dónde», que pide
    orientación («no sé cómo registrar un alumno»), y el reporte de un problema
    («no puedo/logro», «no me deja(n)/permite», «no (me) aparece(n)/sale(n)/carga(n)/
    muestra(n)», «no encuentro/veo»), que se atiende con la consulta u orientación
    existente; cualquier otro «no» sigue bloqueando;
    UNSUPPORTED-ATTENDANCE detecta captura/registro/guardado de asistencia;
    UNSUPPORTED-EVALUATION-WRITE detecta captura de evaluaciones sin orientación,
-   salvo el verbo que sigue inmediatamente a «no puedo/podemos/logro/me deja(n)/
-   me permite» («no me deja registrar calificaciones»), que recibe la guía de
-   HOW_TO_RECORD_EVALUATIONS; cualquier otro verbo de escritura sigue bloqueando.
+   salvo el verbo que sigue inmediatamente a «(no) puedo/podemos», «no logro»,
+   «no me deja(n)/permite», «se puede(n)» o «dónde» («no me deja registrar
+   calificaciones», «¿puedo registrar calificaciones?», «¿dónde registro las
+   calificaciones?»), que recibe la guía de HOW_TO_RECORD_EVALUATIONS; pedirlo al
+   chatbot («puedes/me puedes/podrías registrar») y cualquier otro verbo de escritura
+   siguen bloqueando. «dónde» equivale a «cómo» en todos los patrones de orientación.
    Una cláusula bloqueada impide una resolución final operativa del mensaje.
 5. Por cláusula, seleccionar todos los patrones de la categoría de mayor prioridad:
    modificación > orientación > consulta > ayuda. No elegir uno por orden del catálogo.

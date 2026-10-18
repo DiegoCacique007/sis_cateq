@@ -341,6 +341,69 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
             ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
     }
 
+    #[DataProvider('evaluationRecorders')]
+    public function test_possibility_and_place_questions_get_grade_guidance_for_own_module(R $role, string $url): void
+    {
+        $this->login($role);
+        foreach (['¿Puedo registrar calificaciones?', '¿Dónde registro las calificaciones?', '¿Se puede registrar calificaciones?'] as $message) {
+            $this->postJson(route('chatbot.message'), ['message' => $message])
+                ->assertOk()->assertJsonPath('status', 'success')->assertJsonPath('code', 'GUIDANCE_READY')
+                ->assertJsonCount(3, 'data.items')->assertJsonPath('actions.0.url', $url);
+        }
+    }
+
+    #[DataProvider('nonRecorderRoles')]
+    public function test_possibility_question_on_grades_is_answered_with_denial(R $role): void
+    {
+        $this->login($role);
+        foreach (['¿Puedo registrar calificaciones?', '¿Dónde registro las calificaciones?'] as $message) {
+            $response = $this->postJson(route('chatbot.message'), ['message' => $message])
+                ->assertOk()->assertJsonPath('status', 'denied')->assertJsonPath('code', 'ROLE_NOT_ALLOWED')
+                ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+            $this->assertStringNotContainsString('Acude a Secretaría.', $response->json('message'));
+        }
+    }
+
+    public function test_grade_possibility_question_without_period_requires_it(): void
+    {
+        $this->login();
+        $this->withSession(['periodo_activo_id' => null]);
+        $this->postJson(route('chatbot.message'), ['message' => '¿Puedo registrar calificaciones?'])
+            ->assertOk()->assertJsonPath('status', 'missing_context')->assertJsonPath('code', 'MISSING_PERIOD');
+    }
+
+    public function test_secretary_not_knowing_where_to_register_student_gets_guidance(): void
+    {
+        $this->login(R::Secretaria);
+        $this->postJson(route('chatbot.message'), ['message' => 'No sé dónde dar de alta a un alumno'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonPath('code', 'GUIDANCE_READY')
+            ->assertJsonPath('actions.0.url', '/secretaria/alumnos');
+    }
+
+    #[DataProvider('supervisorRoles')]
+    public function test_not_knowing_where_to_register_student_is_sent_to_secretary(R $role): void
+    {
+        $this->login($role);
+        $response = $this->postJson(route('chatbot.message'), ['message' => 'No sé dónde dar de alta a un alumno'])
+            ->assertOk()->assertJsonPath('status', 'denied')->assertJsonPath('code', 'ROLE_NOT_ALLOWED');
+        $this->assertStringContainsString('Acude a Secretaría.', $response->json('message'));
+    }
+
+    public static function botDirectedGradeWrites(): array
+    {
+        return [['puedes registrar las calificaciones de mi grupo'], ['¿me puedes registrar calificaciones?'],
+            ['¿podrías registrar las calificaciones?'], ['¿dónde registro la asistencia?']];
+    }
+
+    #[DataProvider('botDirectedGradeWrites')]
+    public function test_asking_bot_to_write_stays_unsupported_without_data(string $message): void
+    {
+        $this->login(R::Secretaria);
+        $this->postJson(route('chatbot.message'), ['message' => $message])
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
+            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+    }
+
     public function test_parish_priest_can_read_but_cannot_register_student(): void
     {
         $context = $this->login(R::Parroco);
