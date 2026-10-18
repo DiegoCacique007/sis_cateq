@@ -2,6 +2,7 @@
 
 namespace App\Services\Chatbot\Agents;
 
+use App\Enums\UserRole as R;
 use App\Queries\AccessibleAsignaciones;
 use App\Services\Authorization\AccessContext;
 use App\Services\Authorization\CatequesisAccess;
@@ -10,6 +11,17 @@ use App\Services\Authorization\CatequesisAccess;
 final class AssignmentOptions
 {
     public function __construct(private readonly AccessibleAsignaciones $assignments, private readonly CatequesisAccess $access) {}
+
+    /** Alcance del contexto ya resuelto, solo para redactar respuestas vacías; nunca se serializa. */
+    public static function scope(AccessContext $context): string
+    {
+        return match ($context->role) {
+            R::Catequista => 'own',
+            R::CoordinadorComunidades => 'community',
+            R::Secretaria => 'manager',
+            R::Parroco, R::CoordinadorGeneral => 'supervisor',
+        };
+    }
 
     public function data(AccessContext $context, ?int $id = null): array
     {
@@ -37,6 +49,6 @@ final class AssignmentOptions
 
         return new AgentResponse('RESOURCE_SELECTION_REQUIRED', 'ASSIGNMENT_SELECTION_REQUIRED', 'chatbot.select_assignment',
             ['resourceType' => 'assignment', 'options' => $options],
-            [['type' => 'select_resource', 'resourceType' => 'assignment']], ['hasMore' => $data['hasMore']]);
+            [['type' => 'select_resource', 'resourceType' => 'assignment']], ['hasMore' => $data['hasMore'], 'scope' => self::scope($context)]);
     }
 }

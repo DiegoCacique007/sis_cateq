@@ -70,6 +70,16 @@ de asistencia pueden llevar el ID ya autorizado como parámetro del módulo exis
 No se exponen modelos, relaciones completas, metadatos técnicos, nombres de agentes,
 reglas internas, contraseñas ni tokens. Los códigos funcionales son estables.
 
+meta solo contiene hasMore. AgentResponse.metadata puede llevar datos internos de
+redacción (scope: own/community/manager/supervisor, calculado del rol del contexto ya
+resuelto, sin consultas) que el formatter usa para elegir el texto de una lista vacía
+y nunca serializa; una prueba verifica para los cinco roles que el JSON no contiene
+scope ni sus valores. Los rechazos por rol (boleta, asistencia, calificaciones), la
+edición de alumnos y el cambio administrativo de Secretaría tienen textos propios;
+el catálogo completo está en chatbot-agentes.md, sección «Mensajes al usuario».
+Las listas vacías ya no responden «No se encontraron registros.» en grupos, alumnos
+ni evaluaciones; ese texto genérico queda solo como respaldo sin alcance.
+
 Una decisión funcional (incluidos denied/unsupported/selección) responde HTTP 200.
 Errores de transporte/autenticación: 401 invitado, 403 cuenta no autorizada,
 419 CSRF/sesión, 422 validación, 429 límite y 500 error inesperado. Todos tienen la

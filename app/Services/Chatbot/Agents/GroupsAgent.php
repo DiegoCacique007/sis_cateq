@@ -29,6 +29,6 @@ final class GroupsAgent implements Agent
 
         return new AgentResponse('OK', $facts->intent->value.'_READY',
             $facts->intent === I::ViewAttendanceList ? 'chatbot.attendance_in_group_module' : 'chatbot.groups_ready',
-            ['groups' => $data['items']], $actions, ['hasMore' => $data['hasMore']]);
+            ['groups' => $data['items']], $actions, ['hasMore' => $data['hasMore'], 'scope' => AssignmentOptions::scope($facts->context)]);
     }
 }

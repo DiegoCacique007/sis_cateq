@@ -216,6 +216,52 @@ campo faltante sin seleccionar ni inferir su valor. AMBIGUOUS pide revisión y
 aclaración de datos, sin ofrecer una asignación arbitraria. IDs externos e inexistentes
 producen respuestas iguales y vacías de datos personales. No se envían mensajes.
 
+Los rechazos orientan según la decisión del motor, sin consultas ni permisos nuevos:
+ROLE_NOT_ALLOWED elige el texto por la capacidad rechazada (VIEW_BOLETAS,
+VIEW_ATTENDANCE_LIST, MANAGE_EVALUATIONS); EXECUTION_UNSUPPORTED con MANAGE_STUDENTS
+(solo lo alcanza quien posee esa capacidad) enlaza al módulo Alumnos. handle() pasa a
+response() el rol del contexto del servidor únicamente para no derivar al responsable
+recomendado a sí mismo (ESCALATE de Secretaría); sin rol (revalidación en AgentGate)
+se conserva el texto y la canalización genéricos. El rol nunca concede acceso.
+
+## Mensajes al usuario
+
+Los textos viven en ChatbotResponseFormatter. Rechazos y orientación:
+
+| Caso | Rol | Texto |
+|---|---|---|
+| «No me deja editar un alumno» (EXECUTION_UNSUPPORTED) | Secretaría | El asistente no modifica datos. Edita el alumno desde el módulo Alumnos. (+ enlace «Abrir módulo») |
+| Cambio administrativo (ESCALATE) | Secretaría | El asistente no modifica datos. Realiza el cambio desde el módulo correspondiente. |
+| Cambio administrativo (ESCALATE) | Otros roles | Esta operación requiere atención en el módulo correspondiente. Acude a Secretaría. |
+| Boleta (ROLE_NOT_ALLOWED) | Catequista | Las boletas las genera Secretaría. Solicítale la boleta del alumno. |
+| Lista de asistencia (ROLE_NOT_ALLOWED) | Secretaría y supervisión | La asistencia se toma en papel con la lista que cada catequista descarga desde Mi grupo. El sistema no la registra. |
+| Registrar calificaciones (ROLE_NOT_ALLOWED) | Párroco y coordinadores | Las calificaciones las registran el catequista del grupo y Secretaría en el módulo Evaluaciones. Para una corrección, acude a ellos. |
+| Guía de calificaciones, paso 1 | Catequista | Entra a Evaluaciones y selecciona el grupo asignado y la unidad; si no aparece ningún grupo, revisa el periodo de trabajo o solicita tu asignación a Secretaría. |
+
+Las listas vacías se redactan según el alcance del contexto ya resuelto
+(AssignmentOptions::scope): own = Catequista, community = Coordinador de Comunidades,
+manager = Secretaría, supervisor = Párroco y Coordinador General. AssignmentOptions,
+GroupsAgent, StudentsAgent y EvaluationsAgent lo añaden a metadata; el formatter solo
+lo usa para elegir el texto y nunca lo serializa. Sin alcance se usa el texto genérico.
+«Periodo actual» y «Asignar grupos» son los rótulos de los menús; los cinco roles pueden
+cambiar el periodo desde «Periodo actual».
+
+| Caso | Alcance | Texto |
+|---|---|---|
+| Sin asignaciones para elegir | own | No tienes asignaciones en el periodo actual. Comprueba que sea el periodo correcto o solicita tu asignación a Secretaría. |
+| | community | Tu comunidad no tiene asignaciones en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría. |
+| | manager | No hay asignaciones en el periodo actual. Comprueba que sea el periodo correcto o regístralas en Asignar grupos. |
+| | supervisor | No hay asignaciones en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría. |
+| Grupos vacíos («No tengo grupo») | own | No tienes grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o solicita tu asignación a Secretaría. |
+| | community | Tu comunidad no tiene grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría. |
+| | manager | No hay grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o asígnalos en Asignar grupos. |
+| | supervisor | No hay grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría. |
+| Asignación sin alumnos | own | Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, solicita su inscripción a Secretaría. |
+| | manager | Este grupo no tiene alumnos inscritos en el periodo actual. Puedes inscribirlos en Inscripciones. |
+| | community, supervisor | Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, consulta a Secretaría. |
+| Asignación sin evaluaciones | own, manager | Aún no hay calificaciones registradas para esta selección. Puedes capturarlas en Evaluaciones. |
+| | community, supervisor | Aún no hay calificaciones registradas para esta selección. Las registran el catequista del grupo y Secretaría. |
+
 ## Integración PHP y pruebas
 
 ```php
@@ -248,8 +294,9 @@ sin SQL y ausencia de escrituras. Incluye el encadenamiento completo desde mensa
   entre autorización y eager loading siguen siendo un riesgo del dominio existente.
 - Medir SQL e índices en MySQL real; optimizar verificación de opciones sin duplicar
   la lógica de canUseAsignacion. No se validaron producción ni migraciones completas.
-- Definir paginación/cursor y presentación de listas vacías o truncadas; validar
-  textos con usuarios. No automatizar selección ni ampliar proyecciones por conveniencia.
+- Definir paginación/cursor y presentación de listas truncadas; validar con usuarios
+  los textos de listas vacías y rechazos (sección «Mensajes al usuario»). No
+  automatizar selección ni ampliar proyecciones por conveniencia.
 - Los escritores administrativos pendientes de fases previas siguen pendientes.
 - Asistencia ofrece navegación; no hay persistencia de asistencia ni generación PDF
   nueva en el agente. Boletas también utiliza orientación al módulo existente.

@@ -54,10 +54,17 @@ final class ChatbotResponseFormatter
             $items[] = $this->intentLabel($intent);
         }
         $options = array_map(fn ($group) => ['id' => $group['assignmentId'], 'label' => $this->groupLabel($group)], $response->data['options'] ?? []);
+        // El alcance solo elige la redacción de una respuesta vacía; no se incluye en la salida.
+        $scope = $response->metadata['scope'] ?? null;
         if ($status === 'selection_required' && ! $options) {
-            $message = 'No hay asignaciones disponibles para seleccionar en este contexto. Solicita una revisión a Secretaría.';
+            $message = $this->emptyMessage('assignments', $scope)
+                ?? 'No hay asignaciones disponibles para seleccionar en este contexto. Solicita una revisión a Secretaría.';
         } elseif ($status === 'success' && ! $items) {
-            $message .= ' No se encontraron registros.';
+            $case = match ($response->messageKey) {
+                'chatbot.groups_ready' => 'groups', 'chatbot.students_ready' => 'students',
+                'chatbot.evaluations_ready' => 'evaluations', default => null,
+            };
+            $message = ($case ? $this->emptyMessage($case, $scope) : null) ?? $message.' No se encontraron registros.';
         }
         $actions = [];
         foreach ($response->suggestedActions as $action) {
@@ -71,6 +78,40 @@ final class ChatbotResponseFormatter
         return ['status' => $status, 'code' => $response->code, 'message' => $message,
             'data' => ['items' => array_values($items), 'options' => $options], 'actions' => $actions,
             'meta' => ['hasMore' => (bool) ($response->metadata['hasMore'] ?? false)]];
+    }
+
+    /** Texto de lista vacía por caso y alcance; null conserva el texto genérico. */
+    private function emptyMessage(string $case, ?string $scope): ?string
+    {
+        $period = 'Comprueba que sea el periodo correcto';
+
+        return match ($case) {
+            'assignments' => match ($scope) {
+                'own' => "No tienes asignaciones en el periodo actual. $period o solicita tu asignación a Secretaría.",
+                'community' => "Tu comunidad no tiene asignaciones en el periodo actual. $period o consulta a Secretaría.",
+                'manager' => "No hay asignaciones en el periodo actual. $period o regístralas en Asignar grupos.",
+                'supervisor' => "No hay asignaciones en el periodo actual. $period o consulta a Secretaría.",
+                default => null,
+            },
+            'groups' => match ($scope) {
+                'own' => "No tienes grupos asignados en el periodo actual. $period o solicita tu asignación a Secretaría.",
+                'community' => "Tu comunidad no tiene grupos asignados en el periodo actual. $period o consulta a Secretaría.",
+                'manager' => "No hay grupos asignados en el periodo actual. $period o asígnalos en Asignar grupos.",
+                'supervisor' => "No hay grupos asignados en el periodo actual. $period o consulta a Secretaría.",
+                default => null,
+            },
+            'students' => match ($scope) {
+                'own' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, solicita su inscripción a Secretaría.',
+                'manager' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Puedes inscribirlos en Inscripciones.',
+                'community', 'supervisor' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, consulta a Secretaría.',
+                default => null,
+            },
+            'evaluations' => match ($scope) {
+                'own', 'manager' => 'Aún no hay calificaciones registradas para esta selección. Puedes capturarlas en Evaluaciones.',
+                'community', 'supervisor' => 'Aún no hay calificaciones registradas para esta selección. Las registran el catequista del grupo y Secretaría.',
+                default => null,
+            },
+        };
     }
 
     private function groupLabel(array $group): string

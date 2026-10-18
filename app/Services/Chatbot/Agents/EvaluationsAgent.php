@@ -50,6 +50,6 @@ final class EvaluationsAgent implements Agent
                 'student' => ['id' => (int) $e->inscripcion->alumno->id, 'fullName' => $e->inscripcion->alumno->nombre_completo],
                 'unit' => $e->unidad->nombre, 'rubric' => $e->rubro->nombre, 'grade' => $e->calificacion,
             ])->values()->all(),
-        ], metadata: ['hasMore' => $rows->count() > 100]);
+        ], metadata: ['hasMore' => $rows->count() > 100, 'scope' => AssignmentOptions::scope($facts->context)]);
     }
 }

@@ -210,9 +210,9 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
     {
         $context = $this->login();
         $this->records($context, period: 2);
-        $response = $this->postJson(route('chatbot.message'), ['message' => 'No puedo ver mis alumnos'])
-            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonCount(0, 'data.options');
-        $this->assertStringContainsString('Secretaría', $response->json('message'));
+        $this->postJson(route('chatbot.message'), ['message' => 'No puedo ver mis alumnos'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonCount(0, 'data.options')
+            ->assertJsonPath('message', 'No tienes asignaciones en el periodo actual. Comprueba que sea el periodo correcto o solicita tu asignación a Secretaría.');
     }
 
     public function test_secretary_reporting_blocked_registration_gets_guidance(): void
@@ -425,13 +425,122 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         $this->assertStringNotContainsString('Acude a Secretaría.', $response->json('message'));
     }
 
-    public function test_catechist_without_group_in_period_is_told_no_records(): void
+    public function test_catechist_without_group_in_period_is_told_to_check_period_or_ask_secretary(): void
     {
         $context = $this->login();
         $this->records($context, period: 2);
-        $response = $this->postJson(route('chatbot.message'), ['message' => 'No tengo grupo'])
-            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(0, 'data.items');
-        $this->assertStringContainsString('No se encontraron registros.', $response->json('message'));
+        $this->postJson(route('chatbot.message'), ['message' => 'No tengo grupo'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(0, 'data.items')
+            ->assertJsonPath('message', 'No tienes grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o solicita tu asignación a Secretaría.');
+    }
+
+    /** Textos de lista vacía por caso y rol: [caso => [rol => texto]]. */
+    private const EMPTY_TEXTS = [
+        'assignments' => [
+            'catequista' => 'No tienes asignaciones en el periodo actual. Comprueba que sea el periodo correcto o solicita tu asignación a Secretaría.',
+            'coordinador_comunidades' => 'Tu comunidad no tiene asignaciones en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría.',
+            'secretaria' => 'No hay asignaciones en el periodo actual. Comprueba que sea el periodo correcto o regístralas en Asignar grupos.',
+            'parroco' => 'No hay asignaciones en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría.',
+            'coordinador_general' => 'No hay asignaciones en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría.',
+        ],
+        'groups' => [
+            'catequista' => 'No tienes grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o solicita tu asignación a Secretaría.',
+            'coordinador_comunidades' => 'Tu comunidad no tiene grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría.',
+            'secretaria' => 'No hay grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o asígnalos en Asignar grupos.',
+            'parroco' => 'No hay grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría.',
+            'coordinador_general' => 'No hay grupos asignados en el periodo actual. Comprueba que sea el periodo correcto o consulta a Secretaría.',
+        ],
+        'students' => [
+            'catequista' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, solicita su inscripción a Secretaría.',
+            'coordinador_comunidades' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, consulta a Secretaría.',
+            'secretaria' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Puedes inscribirlos en Inscripciones.',
+            'parroco' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, consulta a Secretaría.',
+            'coordinador_general' => 'Este grupo no tiene alumnos inscritos en el periodo actual. Si falta alguno, consulta a Secretaría.',
+        ],
+        'evaluations' => [
+            'catequista' => 'Aún no hay calificaciones registradas para esta selección. Puedes capturarlas en Evaluaciones.',
+            'coordinador_comunidades' => 'Aún no hay calificaciones registradas para esta selección. Las registran el catequista del grupo y Secretaría.',
+            'secretaria' => 'Aún no hay calificaciones registradas para esta selección. Puedes capturarlas en Evaluaciones.',
+            'parroco' => 'Aún no hay calificaciones registradas para esta selección. Las registran el catequista del grupo y Secretaría.',
+            'coordinador_general' => 'Aún no hay calificaciones registradas para esta selección. Las registran el catequista del grupo y Secretaría.',
+        ],
+    ];
+
+    /** Asignación válida del periodo 1 sin inscripciones (grupo vacío). */
+    private function emptyAssignment(\App\Services\Authorization\AccessContext $context): int
+    {
+        $group = DB::table('grupos')->insertGetId(['periodo_id' => 1]);
+
+        return DB::table('asigna_grupo')->insertGetId([
+            'catequista_id' => $context->userId, 'comunidad_id' => 1, 'grupo_id' => $group, 'nivel_id' => 1, 'periodo_id' => 1,
+        ]);
+    }
+
+    #[DataProvider('roles')]
+    public function test_empty_results_have_exact_text_for_each_role(R $role): void
+    {
+        $context = $this->login($role);
+        // Sin asignaciones visibles en el periodo 1: existen en el periodo 2 y, para los alcances acotados,
+        // también de otro catequista en otra comunidad (Secretaría y supervisión sí las verían).
+        $this->records($context, period: 2);
+        if ($role === R::Catequista || $role === R::CoordinadorComunidades) {
+            $this->records($this->context(), community: 2);
+        }
+        $this->postJson(route('chatbot.message'), ['message' => 'mis alumnos'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonCount(0, 'data.options')
+            ->assertJsonPath('message', self::EMPTY_TEXTS['assignments'][$role->value]);
+        if ($role === R::Catequista || $role === R::CoordinadorComunidades) {
+            $this->postJson(route('chatbot.message'), ['message' => 'No tengo grupo'])
+                ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(0, 'data.items')
+                ->assertJsonPath('message', self::EMPTY_TEXTS['groups'][$role->value]);
+        }
+        $assignment = $this->emptyAssignment($context);
+        $this->postJson(route('chatbot.message'), ['message' => 'mis alumnos', 'assignment_id' => $assignment])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(0, 'data.items')
+            ->assertJsonPath('message', self::EMPTY_TEXTS['students'][$role->value]);
+        $this->postJson(route('chatbot.message'), ['message' => 'muéstrame evaluaciones', 'assignment_id' => $assignment])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(0, 'data.items')
+            ->assertJsonPath('message', self::EMPTY_TEXTS['evaluations'][$role->value]);
+    }
+
+    #[DataProvider('roles')]
+    public function test_empty_groups_text_for_each_role_when_period_has_no_assignments(R $role): void
+    {
+        $context = $this->login($role);
+        $this->records($context, period: 2);
+        $this->postJson(route('chatbot.message'), ['message' => 'No tengo grupos asignados'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(0, 'data.items')
+            ->assertJsonPath('message', self::EMPTY_TEXTS['groups'][$role->value]);
+    }
+
+    #[DataProvider('roles')]
+    public function test_non_empty_results_keep_their_current_text(R $role): void
+    {
+        $context = $this->login($role);
+        $ids = $this->records($context);
+        $this->postJson(route('chatbot.message'), ['message' => 'mis grupos'])
+            ->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('message', 'Estas son tus asignaciones disponibles.');
+        $this->postJson(route('chatbot.message'), ['message' => 'mis alumnos'])
+            ->assertOk()->assertJsonPath('message', 'Selecciona una asignación para continuar.');
+        $this->postJson(route('chatbot.message'), ['message' => 'mis alumnos', 'assignment_id' => $ids['assignment']])
+            ->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('message', 'Estos son los alumnos de la asignación seleccionada.');
+    }
+
+    #[DataProvider('roles')]
+    public function test_scope_is_never_serialized_in_json(R $role): void
+    {
+        $context = $this->login($role);
+        $ids = $this->records($context);
+        $assignment = $this->emptyAssignment($context);
+        foreach ([['message' => 'mis grupos'], ['message' => 'mis alumnos'], ['message' => 'mis alumnos', 'assignment_id' => $assignment],
+            ['message' => 'muéstrame evaluaciones', 'assignment_id' => $ids['assignment']], ['message' => 'No tengo grupo'], ['message' => 'ayuda']] as $payload) {
+            $response = $this->postJson(route('chatbot.message'), $payload)->assertOk()
+                ->assertJsonMissingPath('meta.scope')->assertJsonMissingPath('scope');
+            $this->assertSame(['hasMore'], array_keys($response->json('meta')));
+            foreach (['scope', 'own', 'community', 'manager', 'supervisor'] as $leak) {
+                $this->assertStringNotContainsString('"'.$leak.'"', $response->getContent());
+            }
+        }
     }
 
     public function test_catechist_lacking_group_report_lists_only_own_assignments(): void

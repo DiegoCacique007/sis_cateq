@@ -39,6 +39,6 @@ final class StudentsAgent implements Agent
 
         return new AgentResponse('OK', 'STUDENTS_READY', 'chatbot.students_ready', [
             'students' => $rows->take(100)->map(fn ($a) => ['id' => (int) $a->id, 'fullName' => $a->nombre_completo])->values()->all(),
-        ], metadata: ['hasMore' => $rows->count() > 100]);
+        ], metadata: ['hasMore' => $rows->count() > 100, 'scope' => AssignmentOptions::scope($facts->context)]);
     }
 }
