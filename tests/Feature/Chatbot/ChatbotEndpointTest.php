@@ -404,6 +404,86 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
             ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
     }
 
+    #[DataProvider('evaluationRecorders')]
+    public function test_impersonal_and_new_verb_grade_reports_get_guidance_for_own_module(R $role, string $url): void
+    {
+        $this->login($role);
+        foreach (['No se guardan las calificaciones', 'No puedo meter las calificaciones', 'No me deja que registre las calificaciones'] as $message) {
+            $this->postJson(route('chatbot.message'), ['message' => $message])
+                ->assertOk()->assertJsonPath('status', 'success')->assertJsonPath('code', 'GUIDANCE_READY')
+                ->assertJsonCount(3, 'data.items')->assertJsonPath('actions.0.url', $url);
+        }
+    }
+
+    #[DataProvider('nonRecorderRoles')]
+    public function test_impersonal_grade_report_is_denied_for_non_recorders(R $role): void
+    {
+        $this->login($role);
+        $response = $this->postJson(route('chatbot.message'), ['message' => 'No se guardan las calificaciones'])
+            ->assertOk()->assertJsonPath('status', 'denied')->assertJsonPath('code', 'ROLE_NOT_ALLOWED')
+            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+        $this->assertStringNotContainsString('Acude a Secretaría.', $response->json('message'));
+    }
+
+    public function test_catechist_without_group_in_period_is_told_no_records(): void
+    {
+        $context = $this->login();
+        $this->records($context, period: 2);
+        $response = $this->postJson(route('chatbot.message'), ['message' => 'No tengo grupo'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(0, 'data.items');
+        $this->assertStringContainsString('No se encontraron registros.', $response->json('message'));
+    }
+
+    public function test_catechist_lacking_group_report_lists_only_own_assignments(): void
+    {
+        $context = $this->login();
+        $own = $this->records($context);
+        $other = $this->records($this->context());
+        DB::table('grupos')->where('id', $own['group'])->update(['nombre' => 'Grupo propio']);
+        DB::table('grupos')->where('id', $other['group'])->update(['nombre' => 'Grupo ajeno']);
+        $this->postJson(route('chatbot.message'), ['message' => 'No tengo grupos asignados'])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(1, 'data.items')
+            ->assertSee('Grupo propio')->assertDontSee('Grupo ajeno');
+        $this->postJson(route('chatbot.message'), ['message' => 'No tengo alumnos'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonCount(1, 'data.options')
+            ->assertJsonPath('data.options.0.id', $own['assignment']);
+    }
+
+    public function test_community_coordinator_impersonal_students_report_sees_only_own_community(): void
+    {
+        $context = $this->login(R::CoordinadorComunidades);
+        $own = $this->records($context);
+        $this->records($context, community: 2);
+        $this->postJson(route('chatbot.message'), ['message' => 'No se ven mis alumnos'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonCount(1, 'data.options')
+            ->assertJsonPath('data.options.0.id', $own['assignment']);
+    }
+
+    public function test_general_coordinator_impersonal_grades_report_gets_selection(): void
+    {
+        $this->login(R::CoordinadorGeneral);
+        $ids = $this->records($this->context());
+        $this->postJson(route('chatbot.message'), ['message' => 'No se cargan las evaluaciones'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonPath('data.options.0.id', $ids['assignment']);
+        $this->postJson(route('chatbot.message'), ['message' => 'No se cargan las evaluaciones', 'assignment_id' => $ids['assignment']])
+            ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(1, 'data.items');
+    }
+
+    public static function blockedImpersonalWrites(): array
+    {
+        return [['no se registra la calificación'], ['no se pone la calificación'], ['no se guarda la asistencia'],
+            ['mete las calificaciones de mi grupo'], ['No funciona'], ['No me sale nada']];
+    }
+
+    #[DataProvider('blockedImpersonalWrites')]
+    public function test_blocked_or_unrecognized_reports_stay_unsupported_without_data(string $message): void
+    {
+        $this->login(R::Secretaria);
+        $this->postJson(route('chatbot.message'), ['message' => $message])
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
+            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+    }
+
     public function test_parish_priest_can_read_but_cannot_register_student(): void
     {
         $context = $this->login(R::Parroco);

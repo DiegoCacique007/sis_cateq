@@ -123,6 +123,24 @@ class RuleBasedIntentResolverTest extends TestCase
             ['¿Dónde administro periodos?', I::HowToManagePeriods],
             ['¿Dónde registro un alumno?', I::HowToRegisterStudent],
             ['¿dónde puedo crear niveles?', I::HowToManageLevels],
+            // Reportes impersonales («no se» + verbo conjugado), de carencia y verbos nuevos.
+            ['No se guardan las calificaciones', I::HowToRecordEvaluations],
+            ['no se guarda la calificación', I::HowToRecordEvaluations],
+            ['No se ven mis alumnos', I::ViewGroupStudents],
+            ['No se cargan las evaluaciones', I::ViewEvaluations],
+            ['no se muestran mis alumnos', I::ViewGroupStudents],
+            ['No sale mi grupo', I::ViewMyGroups],
+            ['No aparece el alumno', I::ViewGroupStudents],
+            ['No tengo grupo', I::ViewMyGroups],
+            ['No tengo grupos asignados', I::ViewMyGroups],
+            ['no tengo ningún grupo asignado', I::ViewMyGroups],
+            ['No tengo alumnos', I::ViewGroupStudents],
+            ['no tengo ningún alumno', I::ViewGroupStudents],
+            ['No puedo meter las calificaciones', I::HowToRecordEvaluations],
+            ['¿puedo meter calificaciones?', I::HowToRecordEvaluations],
+            ['No me deja que registre las calificaciones', I::HowToRecordEvaluations],
+            ['no me dejan que capture la evaluación', I::HowToRecordEvaluations],
+            ['no me permite que meta las calificaciones', I::HowToRecordEvaluations],
         ];
     }
 
@@ -162,7 +180,54 @@ class RuleBasedIntentResolverTest extends TestCase
             ['no quiero ver mis alumnos'], ['¿dónde registro la asistencia?'],
             ['registra las calificaciones donde falten'], ['guarda las calificaciones porque puedo registrar'],
             ['no sé dónde, pero no quiero ver alumnos'], ['nunca sé dónde registrar calificaciones'],
+            // Sin objeto: no corresponden a ninguna intención.
+            ['No me sale nada'], ['No funciona'],
+            // Órdenes, negaciones reales y frases que el impersonal no debe abrir.
+            ['mete las calificaciones de mi grupo'], ['no metas calificaciones'],
+            ['no quiero que se guarden las calificaciones'], ['no se registren calificaciones'],
+            ['no se guarda la asistencia'], ['tampoco se ven mis alumnos'],
+            ['no se registra la calificación'], ['no se captura la evaluación'], ['no se pone la calificación'],
+            ['no tengo que ver alumnos'], ['no tengo ganas de ver mis alumnos'],
+            ['no se ven mis alumnos y no quiero'], ['no sé ver mis alumnos'], ['tengo un alumno nuevo'],
         ];
+    }
+
+    public static function impersonalGradeWrites(): array
+    {
+        return [['no se registra la calificación'], ['no se captura la evaluación']];
+    }
+
+    #[DataProvider('impersonalGradeWrites')]
+    public function test_impersonal_exemption_only_covers_guarda_in_write_guard(string $message): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve($message);
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
+    }
+
+    public function test_impersonal_pone_is_blocked_by_negation_only(): void
+    {
+        // Hueco conocido: UNSUPPORTED-EVALUATION-WRITE no reconoce «pone»; se cerrará en otra tarea.
+        $result = (new RuleBasedIntentResolver)->resolve('no se pone la calificación');
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('NEGATED-REQUEST', $result->matchedPatterns);
+        $this->assertNotContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
+    }
+
+    public function test_impersonal_and_unknowing_no_se_remain_distinct(): void
+    {
+        $resolver = new RuleBasedIntentResolver;
+        $this->assertSame(I::HowToRegisterStudent, $resolver->resolve('no sé cómo registrar un alumno')->intent);
+        $this->assertSame(I::HowToRegisterStudent, $resolver->resolve('no sé dónde dar de alta a un alumno')->intent);
+        $this->assertSame(I::ViewGroupStudents, $resolver->resolve('no se ven mis alumnos')->intent);
+        $this->assertSame('UNSUPPORTED_REQUEST', $resolver->resolve('no sé si quiero ver alumnos')->code);
+    }
+
+    public function test_saved_attendance_report_stays_blocked_by_attendance_guard(): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve('no se guarda la asistencia');
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-ATTENDANCE', $result->matchedPatterns);
     }
 
     public static function botDirectedWrites(): array

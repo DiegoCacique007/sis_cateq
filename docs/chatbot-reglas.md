@@ -356,8 +356,10 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
    expresión de desconocimiento «no sé/sabemos/entiendo/recuerdo cómo/dónde», que pide
    orientación («no sé cómo registrar un alumno»), y el reporte de un problema
    («no puedo/logro», «no me deja(n)/permite», «no (me) aparece(n)/sale(n)/carga(n)/
-   muestra(n)», «no encuentro/veo»), que se atiende con la consulta u orientación
-   existente; cualquier otro «no» sigue bloqueando;
+   muestra(n)», «no encuentro/veo»), también impersonal («no se ve(n)/guarda(n)/
+   carga(n)/muestra(n)»; el verbo conjugado lo distingue de «no sé» + cómo/dónde/si o
+   infinitivo) o de carencia («no tengo [ningún] grupo/alumnos»), que se atiende con la
+   consulta u orientación existente; cualquier otro «no» sigue bloqueando;
    UNSUPPORTED-ATTENDANCE detecta captura/registro/guardado de asistencia;
    UNSUPPORTED-EVALUATION-WRITE detecta captura de evaluaciones sin orientación,
    salvo el verbo que sigue inmediatamente a «(no) puedo/podemos», «no logro»,
@@ -366,6 +368,12 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
    calificaciones?»), que recibe la guía de HOW_TO_RECORD_EVALUATIONS; pedirlo al
    chatbot («puedes/me puedes/podrías registrar») y cualquier otro verbo de escritura
    siguen bloqueando. «dónde» equivale a «cómo» en todos los patrones de orientación.
+   Del impersonal solo se exime «no se guarda»; «no se registra/captura…» sigue
+   bloqueado por esta guarda. Hueco conocido: solo reconoce registra(r)/registro,
+   captura(r)/capturo, pon/poner y guarda(r); no reconoce otras personas (registran,
+   pone, ponen, guardan…), formas de usted (registre, capture, guarde, ponga…),
+   enclíticos (ponle, guárdalas, regístrala…) ni otros verbos (meter, subir, cargar,
+   anotar, asentar, calificar, introducir).
    Una cláusula bloqueada impide una resolución final operativa del mensaje.
 5. Por cláusula, seleccionar todos los patrones de la categoría de mayor prioridad:
    modificación > orientación > consulta > ayuda. No elegir uno por orden del catálogo.
