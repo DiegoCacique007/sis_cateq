@@ -22,7 +22,7 @@ final class IntentPatternCatalog
         $rules = [
             'MOD-STUDENT' => [I::ModifyStudent, 30, "$modify$gap(?:alumno|alumna|alumnos|alumnas)\\b"],
             'MOD-ADMIN' => [I::ModifyAdministrativeData, 30, "$modify$gap(?:administrativ[oa]s?|tutores?|comunidades?|periodos?|niveles?|unidades?|rubros?|usuarios?|grupos?)\\b"],
-            'HOW-EVALUATIONS' => [I::HowToRecordEvaluations, 20, "$how\\s+(?:(?:registrar|registro|capturar|capturo|poner|pongo)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)|evaluar\\b)|\\b(?:no\\s+(?:puedo|podemos|logro|me deja|me dejan|me permite)|puedo|podemos|se puede|se pueden)\\s+(?:registrar|capturar|guardar|poner|subir|cargar|meter)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+(?:me deja|me dejan|me permite)\\s+que\\s+(?:registre|capture|guarde|ponga|suba|cargue|meta)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+se\\s+(?:guarda|guardan)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"],
+            'HOW-EVALUATIONS' => [I::HowToRecordEvaluations, 20, "$how\\s+(?:(?:registrar|registro|capturar|capturo|poner|pongo)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)|evaluar\\b)|\\b(?:no\\s+(?:puedo|podemos|logro|me deja|me dejan|me permite)|puedo|podemos|se puede|se pueden)\\s+(?:registrar|capturar|guardar|poner|subir|cargar|meter|ingresar)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+(?:me deja|me dejan|me permite)\\s+que\\s+(?:registre|capture|guarde|ponga|suba|cargue|meta)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+se\\s+(?:guarda|guardan)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"],
             'HOW-STUDENT' => [I::HowToRegisterStudent, 20, "$how\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\bdar de alta(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\b(?:puedo|podemos|logro|deja|dejan|permite)\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b"],
             'HOW-TUTOR' => [I::HowToRegisterTutor, 20, "(?:$how\\s+)?(?:registrar|registro|agregar|agrego)$gap(?:tutor|tutores|tutora|tutoras)\\b"],
             'HOW-INSCRIPTION' => [I::HowToRegisterInscription, 20, "(?:$how\\s+)?(?:inscribir|inscribo)(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|(?:$how\\s+)?(?:registrar|registro|hacer|hago)$gap(?:inscripcion|inscripciones)\\b"],
@@ -60,16 +60,33 @@ final class IntentPatternCatalog
      */
     public function guards(): array
     {
+        // Escritura de calificaciones: infinitivo, 1.ª persona, tú, él, ellos, usted(es) y enclíticos.
+        // Se excluyen las formas que son sustantivos («cargo», «asiento», «ingreso»).
+        $gradeWrite = '(?:registra|registrar|registro|registran|registras|registre|registren|registrala|registralas|registralo|registralos|registrarla|registrarlas|registrarlo|registrarlos'
+            .'|captura|capturar|capturo|capturan|capturas|capture|capturen|capturala|capturalas|capturalo|capturalos|capturarla|capturarlas|capturarlo|capturarlos'
+            .'|guarda|guardar|guardo|guardan|guardas|guarde|guarden|guardala|guardalas|guardalo|guardalos|guardarla|guardarlas|guardarlo|guardarlos'
+            .'|pon|poner|pongo|pone|ponen|pones|ponga|pongan|ponla|ponlas|ponlo|ponlos|ponle|ponles|ponerla|ponerlas|ponerlo|ponerlos|ponerle|ponerles'
+            .'|mete|meter|meto|meten|metes|meta|metan|metela|metelas|metelo|metelos|metele|meteles|meterla|meterlas|meterlo|meterlos|meterle|meterles'
+            .'|sube|subir|subo|suben|subes|suba|suban|subela|subelas|subelo|subelos|subele|subeles|subirla|subirlas|subirlo|subirlos|subirle|subirles'
+            .'|carga|cargar|cargan|cargas|cargue|carguen|cargala|cargalas|cargalo|cargalos|cargale|cargales|cargarla|cargarlas|cargarlo|cargarlos|cargarle|cargarles'
+            .'|anota|anotar|anoto|anotan|anotas|anote|anoten|anotala|anotalas|anotalo|anotalos|anotale|anotales|anotarla|anotarlas|anotarlo|anotarlos|anotarle|anotarles'
+            .'|asienta|asentar|asientan|asientas|asiente|asienten|asientala|asientalas|asentarla|asentarlas'
+            .'|califica|calificar|califico|califican|calificas|califique|califiquen|calificala|calificalas|calificalo|calificalos|calificale|calificales|calificarla|calificarlas|calificarlo|calificarlos|calificarle|calificarles'
+            .'|ingresa|ingresar|ingresan|ingresas|ingrese|ingresen|ingresala|ingresalas|ingresalo|ingresalos|ingresarla|ingresarlas|ingresarlo|ingresarlos'
+            .'|introduce|introducir|introduzco|introducen|introduces|introduzca|introduzcan|introducela|introducelas|introducirla|introducirlas|introducirlo|introducirlos)';
+        // Un reporte o pregunta propia («no me deja (que)…», «puedo…», «se puede…», «dónde…») solo exime al
+        // verbo que le sigue inmediatamente; «puedes/podrías» (pedir al chatbot) sigue bloqueando.
+        // Del impersonal solo se exime «no se guarda(n)»; «carga(n)» tras «me/se/la» es consulta o sustantivo.
+        $gradeExempt = '(?<!puedo |podemos |no logro |no me deja |no me dejan |no me permite |no me deja que |no me dejan que |no me permite que |se puede |se pueden |donde )'
+            .'(?!(?<=no se )guardan?\b)(?!(?<=me |se |la )cargan?\b)';
+
         return [
             'NEGATED-REQUEST' => '~\b(?:nunca|tampoco)\b|\bno\b(?!\s+(?:se|sabemos|entiendo|recuerdo)\s+(?:como|donde)\b)'
                 .'(?!\s+(?:puedo|podemos|logro|me\s+deja|me\s+dejan|me\s+permite|(?:me\s+)?(?:aparece|aparecen|sale|salen|carga|cargan|muestra|muestran)|encuentro|veo'
                 .'|se\s+(?:ve|ven|guarda|guardan|carga|cargan|muestra|muestran)'
                 .'|tengo(?:\s+(?:un|una|el|la|los|las|mi|mis|ningun|ninguna|ningunos|ningunas))*\s+(?:grupos?|alumnos?|alumnas?))\b)~u',
             'UNSUPPORTED-ATTENDANCE' => '~\b(?:registra|registrar|registro|captura|capturar|capturo|guarda|guardar|marca|marcar|toma|tomar|pasa|pasar)\b.*\basistencia\b~u',
-            // Un reporte o pregunta propia («no me deja…», «puedo…», «se puede…», «dónde…») solo exime
-            // al verbo que le sigue inmediatamente; «puedes/podrías» (pedir al chatbot) sigue bloqueando.
-            // El impersonal solo exime «no se guarda»; «no se registra/captura…» sigue bloqueando.
-            'UNSUPPORTED-EVALUATION-WRITE' => '~^(?!.*\b(?:como|ayuda|ayudame)\b).*(?<!puedo |podemos |no logro |no me deja |no me dejan |no me permite |se puede |se pueden |donde )(?!(?<=no se )guarda\b)\b(?:registra|registrar|registro|captura|capturar|capturo|pon|poner|guarda|guardar)\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b~u',
+            'UNSUPPORTED-EVALUATION-WRITE' => '~^(?!.*\b(?:como|ayuda|ayudame)\b).*'.$gradeExempt.'\b'.$gradeWrite.'\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b~u',
         ];
     }
 }

@@ -141,6 +141,15 @@ class RuleBasedIntentResolverTest extends TestCase
             ['No me deja que registre las calificaciones', I::HowToRecordEvaluations],
             ['no me dejan que capture la evaluación', I::HowToRecordEvaluations],
             ['no me permite que meta las calificaciones', I::HowToRecordEvaluations],
+            // «ingresar» en reporte y pregunta; guía y consultas que la regla de escritura ampliada no debe bloquear.
+            ['No puedo ingresar las calificaciones', I::HowToRecordEvaluations],
+            ['¿puedo ingresar calificaciones?', I::HowToRecordEvaluations],
+            ['¿dónde pongo las calificaciones?', I::HowToRecordEvaluations],
+            ['no me carga la calificación', I::ViewEvaluations],
+            ['ver la carga de calificaciones', I::ViewEvaluations],
+            ['consultar la calificación de la evaluación', I::ViewEvaluations],
+            ['muéstrame la calificación de cada evaluación', I::ViewEvaluations],
+            ['quiero ver las calificaciones guardadas', I::ViewEvaluations],
         ];
     }
 
@@ -192,6 +201,59 @@ class RuleBasedIntentResolverTest extends TestCase
         ];
     }
 
+    /** Cada forma de escritura de calificaciones debe detectarla UNSUPPORTED-EVALUATION-WRITE. */
+    public static function gradeWriteForms(): array
+    {
+        return array_map(fn ($message) => [$message], [
+            'registran las calificaciones', 'registras las calificaciones', 'registre las calificaciones',
+            'registren las calificaciones', 'regístrala en calificaciones', 'regístralas en calificaciones',
+            'registrarlas en calificaciones', 'capturan las evaluaciones', 'capturas las calificaciones',
+            'capture las calificaciones', 'capturen las evaluaciones', 'captúralas en calificaciones',
+            'guardan las calificaciones', 'guardas las calificaciones', 'guarde las calificaciones',
+            'guarden las calificaciones', 'guárdalas en calificaciones', 'pone la calificación a Juan',
+            'ponen las calificaciones', 'pones las calificaciones', 'pongo las calificaciones',
+            'ponga las calificaciones', 'pongan las calificaciones', 'ponle 9 de calificación a Juan',
+            'ponles las calificaciones', 'ponlas en calificaciones', 'ponerle 9 de calificación a Juan',
+            'mete las calificaciones de mi grupo', 'meta las calificaciones', 'sube las calificaciones',
+            'suba las calificaciones', 'carga las calificaciones', 'cargue las evaluaciones',
+            'anota las calificaciones', 'anotar las calificaciones', 'asienta las calificaciones',
+            'califica la evaluación', 'calificar la evaluación', 'califiquen las evaluaciones',
+            'ingresa las calificaciones', 'ingresen las evaluaciones', 'ingrésalas en calificaciones',
+            'introduce las calificaciones', 'introduzca las calificaciones',
+        ]);
+    }
+
+    #[DataProvider('gradeWriteForms')]
+    public function test_every_grade_write_form_is_detected_by_write_guard(string $message): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve($message);
+        $this->assertSame(I::Unknown, $result->intent);
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
+    }
+
+    public function test_ingresar_distinguishes_recording_problem_from_command(): void
+    {
+        $resolver = new RuleBasedIntentResolver;
+        $this->assertSame(I::HowToRecordEvaluations, $resolver->resolve('no puedo ingresar las calificaciones')->intent);
+        $result = $resolver->resolve('ingresa las calificaciones');
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
+    }
+
+    public static function gradeWriteFalsePositives(): array
+    {
+        // Sustantivos excluidos de la lista: no deben activar la regla de escritura.
+        return [['ver la carga de calificaciones'], ['estoy a cargo de las calificaciones'], ['ver el ingreso de calificaciones'],
+            ['consultar la calificación de la evaluación'], ['no me cargan las calificaciones'], ['No se cargan las evaluaciones']];
+    }
+
+    #[DataProvider('gradeWriteFalsePositives')]
+    public function test_nouns_and_display_reports_do_not_trigger_write_guard(string $message): void
+    {
+        $this->assertNotContains('UNSUPPORTED-EVALUATION-WRITE', (new RuleBasedIntentResolver)->resolve($message)->matchedPatterns);
+    }
+
     public static function impersonalGradeWrites(): array
     {
         return [['no se registra la calificación'], ['no se captura la evaluación']];
@@ -205,13 +267,13 @@ class RuleBasedIntentResolverTest extends TestCase
         $this->assertContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
     }
 
-    public function test_impersonal_pone_is_blocked_by_negation_only(): void
+    public function test_impersonal_pone_is_blocked_by_negation_and_write_guard(): void
     {
-        // Hueco conocido: UNSUPPORTED-EVALUATION-WRITE no reconoce «pone»; se cerrará en otra tarea.
+        // El hueco de «pone» quedó cerrado: ahora también lo detecta UNSUPPORTED-EVALUATION-WRITE.
         $result = (new RuleBasedIntentResolver)->resolve('no se pone la calificación');
         $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
         $this->assertContains('NEGATED-REQUEST', $result->matchedPatterns);
-        $this->assertNotContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
+        $this->assertContains('UNSUPPORTED-EVALUATION-WRITE', $result->matchedPatterns);
     }
 
     public function test_impersonal_and_unknowing_no_se_remain_distinct(): void

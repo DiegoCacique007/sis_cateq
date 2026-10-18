@@ -363,17 +363,23 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
    UNSUPPORTED-ATTENDANCE detecta captura/registro/guardado de asistencia;
    UNSUPPORTED-EVALUATION-WRITE detecta captura de evaluaciones sin orientación,
    salvo el verbo que sigue inmediatamente a «(no) puedo/podemos», «no logro»,
-   «no me deja(n)/permite», «se puede(n)» o «dónde» («no me deja registrar
+   «no me deja(n)/permite (que)», «se puede(n)» o «dónde» («no me deja registrar
    calificaciones», «¿puedo registrar calificaciones?», «¿dónde registro las
    calificaciones?»), que recibe la guía de HOW_TO_RECORD_EVALUATIONS; pedirlo al
    chatbot («puedes/me puedes/podrías registrar») y cualquier otro verbo de escritura
    siguen bloqueando. «dónde» equivale a «cómo» en todos los patrones de orientación.
-   Del impersonal solo se exime «no se guarda»; «no se registra/captura…» sigue
-   bloqueado por esta guarda. Hueco conocido: solo reconoce registra(r)/registro,
-   captura(r)/capturo, pon/poner y guarda(r); no reconoce otras personas (registran,
-   pone, ponen, guardan…), formas de usted (registre, capture, guarde, ponga…),
-   enclíticos (ponle, guárdalas, regístrala…) ni otros verbos (meter, subir, cargar,
-   anotar, asentar, calificar, introducir).
+   Reconoce una lista explícita (no raíces, que confundirían «calificación»,
+   «ponderación» o «a cargo» con verbos) de registrar, capturar, guardar, poner,
+   meter, subir, cargar, anotar, asentar, calificar, ingresar e introducir: infinitivo,
+   1.ª persona, tú, él, ellos, usted(es) y enclíticos; excluye los sustantivos
+   «cargo», «asiento» e «ingreso». Del impersonal solo se exime «no se guarda(n)»;
+   «no se registra/captura/pone…» sigue bloqueado. «carga(n)» tras «me/se/la» es
+   consulta o sustantivo («no me cargan las calificaciones», «ver la carga de
+   calificaciones») y no bloquea. Huecos conocidos: la palabra «como» en la cláusula
+   exime toda la guarda («regístralas como calificaciones»); escribir sin el
+   sustantivo («califica/evalúa a mis alumnos») resuelve VIEW_GROUP_STUDENTS;
+   UNSUPPORTED-ATTENDANCE conserva la lista corta («pasen/registre/marquen/anota/
+   tomen la lista de asistencia» resuelven VIEW_ATTENDANCE_LIST).
    Una cláusula bloqueada impide una resolución final operativa del mensaje.
 5. Por cláusula, seleccionar todos los patrones de la categoría de mayor prioridad:
    modificación > orientación > consulta > ayuda. No elegir uno por orden del catálogo.

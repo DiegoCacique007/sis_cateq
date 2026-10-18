@@ -484,6 +484,28 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
             ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
     }
 
+    #[DataProvider('evaluationRecorders')]
+    public function test_new_grade_write_commands_stay_unsupported_without_data(R $role, string $url): void
+    {
+        $context = $this->login($role);
+        $this->records($context);
+        foreach (['carga las calificaciones', 'ingresa las calificaciones', 'ponle 9 de calificación a Juan', 'registren las calificaciones'] as $message) {
+            $this->postJson(route('chatbot.message'), ['message' => $message])
+                ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
+                ->assertJsonPath('data.items', [])->assertJsonPath('data.options', [])->assertJsonPath('actions', []);
+        }
+        $this->postJson(route('chatbot.message'), ['message' => 'No puedo ingresar las calificaciones'])
+            ->assertOk()->assertJsonPath('code', 'GUIDANCE_READY')->assertJsonPath('actions.0.url', $url);
+    }
+
+    public function test_grade_display_report_with_cargan_still_gets_selection(): void
+    {
+        $context = $this->login();
+        $own = $this->records($context);
+        $this->postJson(route('chatbot.message'), ['message' => 'no me cargan las evaluaciones'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonPath('data.options.0.id', $own['assignment']);
+    }
+
     public function test_parish_priest_can_read_but_cannot_register_student(): void
     {
         $context = $this->login(R::Parroco);
