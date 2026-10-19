@@ -15,6 +15,13 @@ use Tests\Support\CatequesisWebTestCase;
 
 class ChatbotEndpointTest extends CatequesisWebTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Cada respuesta registra un evento: la bitácora existe, como el resto del esquema en memoria.
+        (require database_path('migrations/2026_10_18_000001_create_chatbot_events_table.php'))->up();
+    }
+
     private function login(R $role = R::Catequista): \App\Services\Authorization\AccessContext
     {
         $context = $this->context($role);
