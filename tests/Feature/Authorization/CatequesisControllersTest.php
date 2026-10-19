@@ -67,12 +67,14 @@ class CatequesisControllersTest extends CatequesisWebTestCase
         $this->get('/catequista/mi-grupo/exportar-asistencia-pdf')->assertStatus(409);
     }
 
-    public function test_missing_period_redirects_safely(): void
+    public function test_invalid_session_period_is_replaced_by_default_with_notice(): void
     {
         $context = $this->context();
         $this->login($context);
+        $notice = 'El periodo que tenías seleccionado ya no está disponible. Ahora trabajas en Enero 2026 - Diciembre 2026.';
         $this->withSession(['periodo_activo_id' => 9999])->get('/catequista/mi-grupo')
-            ->assertRedirect(route('welcome'))->assertSessionHas('error');
+            ->assertOk()->assertSee(json_encode($notice, 15), false);
+        $this->assertContains(session('periodo_activo_id'), [1, 2]);
     }
 
     public function test_own_evaluations_and_legacy_null_period_are_readable(): void

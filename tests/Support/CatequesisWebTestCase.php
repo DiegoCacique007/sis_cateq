@@ -23,6 +23,7 @@ abstract class CatequesisWebTestCase extends CatequesisTestCase
         Schema::table('periodos', function (Blueprint $t) {
             $t->date('fecha_inicio')->default('2026-01-01');
             $t->date('fecha_fin')->default('2026-12-31');
+            $t->integer('estado')->default(1);
         });
         foreach (['niveles', 'unidades'] as $table) {
             Schema::table($table, fn (Blueprint $t) => $t->integer('numero')->default(1));

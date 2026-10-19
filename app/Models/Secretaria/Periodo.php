@@ -2,6 +2,7 @@
 
 namespace App\Models\Secretaria;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -32,6 +33,15 @@ class Periodo extends Model
     public function asignacionesGrupo()
     {
         return $this->hasMany(AsignaGrupo::class, 'periodo_id');
+    }
+
+    /** Nombre que ve el usuario («Enero 2026 - Diciembre 2026»); único formato para la sesión y los mensajes. */
+    public static function nombreLegible($fechaInicio, $fechaFin): string
+    {
+        $inicio = Carbon::parse($fechaInicio)->locale('es')->translatedFormat('F Y');
+        $fin = Carbon::parse($fechaFin)->locale('es')->translatedFormat('F Y');
+
+        return ucfirst($inicio).' - '.ucfirst($fin);
     }
 
     public function getPeriodoTextoAttribute()

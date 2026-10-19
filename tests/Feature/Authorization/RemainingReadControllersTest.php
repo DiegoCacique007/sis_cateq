@@ -229,11 +229,13 @@ class RemainingReadControllersTest extends CatequesisWebTestCase
     }
 
     #[DataProvider('periodRoutes')]
-    public function test_invalid_session_period_uses_existing_safe_contract(R $role, string $path): void
+    public function test_invalid_session_period_is_replaced_by_default_with_notice(R $role, string $path): void
     {
         $this->records($this->context());
         $this->login($this->context($role));
-        $this->withSession(['periodo_activo_id' => 9999])->get($path)->assertRedirect(route('welcome'))->assertSessionHas('error');
+        $notice = 'El periodo que tenías seleccionado ya no está disponible. Ahora trabajas en Enero 2026 - Diciembre 2026.';
+        $this->withSession(['periodo_activo_id' => 9999])->get($path)->assertOk()->assertSee(json_encode($notice, 15), false);
+        $this->assertContains(session('periodo_activo_id'), [1, 2]);
     }
 
     public function test_soft_deleted_students_tutors_and_inscriptions_are_not_counted_or_listed(): void
