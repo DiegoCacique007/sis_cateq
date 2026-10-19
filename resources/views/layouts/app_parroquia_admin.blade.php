@@ -803,6 +803,26 @@
             return Promise.resolve({ isConfirmed: confirm(message) });
         },
 
+        confirmAction({ title = 'Confirmar acción', text = '', confirmText = 'Confirmar', danger = false } = {}) {
+            if (window.Swal) {
+                return Swal.fire({
+                    icon: danger ? 'warning' : 'question',
+                    title: title,
+                    text: text,
+                    showCancelButton: true,
+                    confirmButtonText: confirmText,
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: danger ? '#dc3545' : '#198754',
+                    cancelButtonColor: '#6c757d',
+                    reverseButtons: true,
+                    width: '360px',
+                    customClass: { popup: 'small-formal-confirm' }
+                });
+            }
+
+            return Promise.resolve({ isConfirmed: confirm(text) });
+        },
+
         confirmLogout() {
             if (window.Swal) {
                 return Swal.fire({

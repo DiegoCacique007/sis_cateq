@@ -302,27 +302,42 @@
                             </div>
 
                             <div class="pendiente-actions">
-                                <form method="POST" action="{{ route('secretaria.usuarios.aprobar', $u->id) }}">
+                                {{-- Los nombres van en data-* y se muestran con text: nunca dentro de JavaScript. --}}
+                                <form method="POST" action="{{ route('secretaria.usuarios.aprobar', $u->id) }}"
+                                      class="js-confirm-form"
+                                      data-confirm-title="¿Aprobar la solicitud?"
+                                      data-confirm-text="¿Aprobar a {{ $u->name }} con el rol solicitado?"
+                                      data-confirm-button="Aprobar">
                                     @csrf
                                     <input type="hidden" name="role" value="{{ $u->requested_role ?? 'catequista' }}">
 
-                                    <button
-                                        type="submit"
-                                        class="btn-approve-card"
-                                        onclick="return confirm('¿Aprobar a {{ $u->name }} con el rol solicitado?');"
-                                    >
+                                    @if(($u->requested_role ?? '') === 'coordinador_comunidades')
+                                        <select name="comunidad_id" class="form-select form-select-sm mb-2" required
+                                                aria-label="Comunidad que coordinará">
+                                            <option value="">Comunidad que coordinará…</option>
+                                            @foreach($comunidades as $comunidad)
+                                                <option value="{{ $comunidad->id }}">{{ $comunidad->comunidad }}</option>
+                                            @endforeach
+                                        </select>
+                                    @endif
+
+                                    <button type="submit" class="btn-approve-card">
                                         <i class="bi bi-check-lg"></i>
                                         Aprobar
                                     </button>
                                 </form>
 
-                                <form method="POST" action="{{ route('secretaria.usuarios.bloquear', $u->id) }}">
+                                <form method="POST" action="{{ route('secretaria.usuarios.bloquear', $u->id) }}"
+                                      class="js-confirm-form"
+                                      data-confirm-title="¿Bloquear la cuenta?"
+                                      data-confirm-text="¿Bloquear a {{ $u->name }}? Esta acción impedirá su acceso."
+                                      data-confirm-button="Bloquear"
+                                      data-confirm-danger="1">
                                     @csrf
 
                                     <button
                                         type="submit"
                                         class="btn-block-card"
-                                        onclick="return confirm('¿Bloquear a {{ $u->name }}? Esta acción impedirá su acceso.');"
                                     >
                                         <i class="bi bi-slash-circle"></i>
                                         Bloquear
@@ -373,5 +388,23 @@
                 }
             });
         }
+
+        // Confirmación con los textos de data-*, mostrados como texto (no HTML).
+        document.querySelectorAll('.js-confirm-form').forEach(function (form) {
+            form.addEventListener('submit', async function (event) {
+                event.preventDefault();
+
+                const result = await window.AppAlert.confirmAction({
+                    title: form.dataset.confirmTitle,
+                    text: form.dataset.confirmText,
+                    confirmText: form.dataset.confirmButton,
+                    danger: form.dataset.confirmDanger === '1',
+                });
+
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
     </script>
 @endsection

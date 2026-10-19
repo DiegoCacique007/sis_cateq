@@ -11,7 +11,8 @@ class UserApprovalTest extends AuthTestCase
 {
     public static function coordinatorRoles(): array
     {
-        return [['coordinador_general'], ['coordinador_comunidades']];
+        // coordinador_comunidades exige comunidad al aprobar: lo cubre UsuariosSeguridadTest con el esquema académico.
+        return [['coordinador_general']];
     }
 
     #[DataProvider('coordinatorRoles')]

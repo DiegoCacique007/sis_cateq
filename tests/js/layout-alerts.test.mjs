@@ -54,3 +54,16 @@ for (const layout of layouts) {
         assert.equal(calls[1].html, undefined);
     });
 }
+
+test('admin: confirmAction muestra título y texto como texto, nunca como HTML', async () => {
+    const { object, calls } = appAlert('admin');
+    const name = "Ana');alert(1);//\"<script>alert(2)</script>";
+    const result = await object.confirmAction({ title: '¿Bloquear la cuenta?', text: `¿Bloquear a ${name}?`, confirmText: 'Bloquear', danger: true });
+
+    assert.equal(result.isConfirmed, true);
+    assert.equal(calls[0].title, '¿Bloquear la cuenta?');
+    assert.equal(calls[0].text, `¿Bloquear a ${name}?`);
+    assert.equal(calls[0].html, undefined);
+    assert.equal(calls[0].confirmButtonText, 'Bloquear');
+    assert.equal(calls[0].icon, 'warning');
+});
