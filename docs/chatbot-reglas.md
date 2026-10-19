@@ -375,9 +375,18 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
    «cargo», «asiento» e «ingreso». Del impersonal solo se exime «no se guarda(n)»;
    «no se registra/captura/pone…» sigue bloqueado. «carga(n)» tras «me/se/la» es
    consulta o sustantivo («no me cargan las calificaciones», «ver la carga de
-   calificaciones») y no bloquea. Huecos conocidos: la palabra «como» en la cláusula
-   exime toda la guarda («regístralas como calificaciones»); escribir sin el
-   sustantivo («califica/evalúa a mis alumnos») resuelve VIEW_GROUP_STUDENTS.
+   calificaciones») y no bloquea. «cómo», «cómo se», «cómo debo», «dónde se», «dónde
+   debo», «ayuda para» y «ayúdame a» solo eximen el verbo que introducen, no toda la
+   cláusula: «regístralas como calificaciones» o «ayuda: registra las calificaciones»
+   bloquean, mientras «¿cómo se registran las calificaciones?» recibe la guía. Calificar
+   o evaluar a alumnos o a un grupo es escritura aunque falte el sustantivo («califica a
+   mis alumnos» bloquea; «¿cómo califico a mis alumnos?» y «¿puedo calificar…?» reciben
+   la guía). «registro de» tras artículo (el, del, mi, un, al, su) es sustantivo: «ver el
+   registro de calificaciones» es VIEW_EVALUATIONS y «no puedo hacer/realizar el registro
+   de…» recibe la guía; «haz/realiza el registro de…» y «registro las calificaciones…»
+   siguen bloqueando. La guía admite también el subjuntivo «no me deja que ingrese…».
+   Hueco conocido: la guarda solo ve la cláusula, así que «califícalos, son mis alumnos»
+   resuelve VIEW_GROUP_STUDENTS.
    UNSUPPORTED-ATTENDANCE usa también una lista explícita de registrar, capturar,
    guardar, marcar, tomar, pasar, poner y anotar (infinitivo, 1.ª persona, tú, él,
    ellos, usted(es) y enclíticos), sin «cargar» («no me carga la lista de asistencia»

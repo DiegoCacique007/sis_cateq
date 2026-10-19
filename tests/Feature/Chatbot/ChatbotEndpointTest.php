@@ -706,6 +706,47 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         }
     }
 
+    #[DataProvider('roles')]
+    public function test_reinforced_write_rules_respond_per_role(R $role): void
+    {
+        $context = $this->login($role);
+        $own = $this->records($context);
+        $module = match ($role) {
+            R::Catequista => '/catequista/evaluaciones',
+            R::Secretaria => '/secretaria/evaluaciones',
+            default => null,
+        };
+        $navigate = fn (?string $url) => $url ? [['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => $url]] : [];
+
+        // Guía: preguntas impersonales, calificar a alumnos y subjuntivo con «ingrese».
+        foreach (['¿Cómo se registran las calificaciones?', '¿Cómo califico a mis alumnos?', 'no me deja que ingrese las calificaciones'] as $message) {
+            $response = $this->postJson(route('chatbot.message'), ['message' => $message])->assertOk();
+            if ($module) {
+                $response->assertJsonPath('status', 'success')->assertJsonPath('code', 'GUIDANCE_READY')
+                    ->assertJsonCount(3, 'data.items')->assertJsonPath('actions', $navigate($module));
+            } else {
+                $response->assertJsonPath('status', 'denied')->assertJsonPath('code', 'ROLE_NOT_ALLOWED')
+                    ->assertJsonPath('message', 'Las calificaciones las registran el catequista del grupo y Secretaría en el módulo Evaluaciones. Para una corrección, acude a ellos.')
+                    ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+            }
+        }
+
+        // Bloqueo con explicación: «como» en otra parte de la frase y calificar a alumnos sin el sustantivo.
+        foreach (['regístralas como calificaciones', 'califica a mis alumnos'] as $message) {
+            $this->postJson(route('chatbot.message'), ['message' => $message])
+                ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'GRADE_WRITE_UNSUPPORTED')
+                ->assertJsonPath('message', $module
+                    ? 'El asistente no registra calificaciones. Puedes hacerlo en Evaluaciones.'
+                    : 'El asistente no registra calificaciones. Las registran el catequista del grupo y Secretaría.')
+                ->assertJsonPath('data.items', [])->assertJsonPath('actions', $navigate($module));
+        }
+
+        // «registro» como sustantivo: consulta de evaluaciones con la selección del propio alcance.
+        $this->postJson(route('chatbot.message'), ['message' => 'ver el registro de calificaciones'])
+            ->assertOk()->assertJsonPath('status', 'selection_required')->assertJsonPath('code', 'ASSIGNMENT_SELECTION_REQUIRED')
+            ->assertJsonCount(1, 'data.options')->assertJsonPath('data.options.0.id', $own['assignment']);
+    }
+
     public function test_message_mixing_both_write_guards_keeps_generic_response(): void
     {
         $this->login(R::Secretaria);

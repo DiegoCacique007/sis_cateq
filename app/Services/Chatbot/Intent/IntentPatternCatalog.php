@@ -22,7 +22,11 @@ final class IntentPatternCatalog
         $rules = [
             'MOD-STUDENT' => [I::ModifyStudent, 30, "$modify$gap(?:alumno|alumna|alumnos|alumnas)\\b"],
             'MOD-ADMIN' => [I::ModifyAdministrativeData, 30, "$modify$gap(?:administrativ[oa]s?|tutores?|comunidades?|periodos?|niveles?|unidades?|rubros?|usuarios?|grupos?)\\b"],
-            'HOW-EVALUATIONS' => [I::HowToRecordEvaluations, 20, "$how\\s+(?:(?:registrar|registro|capturar|capturo|poner|pongo)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)|evaluar\\b)|\\b(?:no\\s+(?:puedo|podemos|logro|me deja|me dejan|me permite)|puedo|podemos|se puede|se pueden)\\s+(?:registrar|capturar|guardar|poner|subir|cargar|meter|ingresar)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+(?:me deja|me dejan|me permite)\\s+que\\s+(?:registre|capture|guarde|ponga|suba|cargue|meta)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+se\\s+(?:guarda|guardan)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"],
+            'HOW-EVALUATIONS' => [I::HowToRecordEvaluations, 20, "$how\\s+(?:(?:registrar|registro|capturar|capturo|poner|pongo)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)|evaluar\\b)|\\b(?:no\\s+(?:puedo|podemos|logro|me deja|me dejan|me permite)|puedo|podemos|se puede|se pueden)\\s+(?:registrar|capturar|guardar|poner|subir|cargar|meter|ingresar)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+(?:me deja|me dejan|me permite)\\s+que\\s+(?:registre|capture|guarde|ponga|suba|cargue|meta|ingrese)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b|\\bno\\s+se\\s+(?:guarda|guardan)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"
+                // Preguntas impersonales, calificar/evaluar a alumnos o grupo y reporte de «hacer el registro de…».
+                ."|\\b(?:como|donde)\\s+se\\s+(?:registra|registran|captura|capturan|pone|ponen|guarda|guardan)$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"
+                ."|(?:$how|\\b(?:no\\s+)?(?:puedo|podemos))\\s+(?:califico|calificar|evaluo|evaluar)(?:\\s+al?)?$gap(?:alumnos?|alumnas?|grupos?)\\b"
+                ."|\\bno\\s+(?:puedo|podemos|logro|me deja|me dejan|me permite)\\s+(?:hacer|realizar)\\s+el\\s+registro\\s+de$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"],
             'HOW-STUDENT' => [I::HowToRegisterStudent, 20, "$how\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\bdar de alta(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|\\b(?:puedo|podemos|logro|deja|dejan|permite)\\s+$register(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b"],
             'HOW-TUTOR' => [I::HowToRegisterTutor, 20, "(?:$how\\s+)?(?:registrar|registro|agregar|agrego)$gap(?:tutor|tutores|tutora|tutoras)\\b"],
             'HOW-INSCRIPTION' => [I::HowToRegisterInscription, 20, "(?:$how\\s+)?(?:inscribir|inscribo)(?:\\s+al?)?$gap(?:alumnos?|alumnas?)\\b|(?:$how\\s+)?(?:registrar|registro|hacer|hago)$gap(?:inscripcion|inscripciones)\\b"],
@@ -30,7 +34,8 @@ final class IntentPatternCatalog
             'VIEW-GROUPS' => [I::ViewMyGroups, 10, "\\bmis grupos\\b|\\bque grupos tengo\\b|\\bgrupos? asignados?\\b|(?:$read|$report)$gap(?:grupo|grupos)\\b|\\bno tengo(?:\\s+ningun[oa]?s?)?$gap(?:grupo|grupos)\\b"],
             'VIEW-STUDENTS' => [I::ViewGroupStudents, 10, "(?<!de )\\bmis alumnos\\b|\\balumnos de mi grupo\\b|(?:$read|$report)$gap(?:alumnos?|alumnas?)\\b|\\blista de alumnos\\b|\\bno tengo(?:\\s+ningun[oa]?s?)?$gap(?:alumnos?|alumnas?)\\b"],
             'VIEW-ATTENDANCE' => [I::ViewAttendanceList, 10, '\b(?:lista|pdf) de asistencia\b|\b(?:consultar|consulto|generar|genera)\s+(?:(?:mi|la)\s+)?asistencia\b'],
-            'VIEW-EVALUATIONS' => [I::ViewEvaluations, 10, "(?:$read|$report)$gap(?:calificaciones|evaluaciones|calificacion|evaluacion)\\b|\\bcalificaciones de mis alumnos\\b"],
+            'VIEW-EVALUATIONS' => [I::ViewEvaluations, 10, "(?:$read|$report)$gap(?:calificaciones|evaluaciones|calificacion|evaluacion)\\b|\\bcalificaciones de mis alumnos\\b"
+                ."|(?:$read|$report)(?:\\s+(?:el|mi|un|del))?\\s+registro\\s+de$gap(?:calificaciones?|evaluaciones?|calificacion|evaluacion)\\b"],
             'VIEW-BOLETA' => [I::ViewBoleta, 10, "(?:$read|generar|genera|descargar)$gap(?:boleta|boletas)\\b"],
             'HELP' => [I::HelpSystem, 0, '^ayuda$|\bque puedes hacer\b|\bcomo funciona el sistema\b|\bque puedo consultar\b'],
         ];
@@ -86,8 +91,12 @@ final class IntentPatternCatalog
             .'|pasa|pasar|pasan|pasas|pase|pasen|pasala|pasalas'
             .'|pon|poner|pongo|pone|ponen|pones|ponga|pongan|ponle|ponla|ponlas'
             .'|anota|anotar|anoto|anotan|anotas|anote|anoten|anotala|anotalas)';
-        $gradeExempt = '(?<!puedo |podemos |no logro |no me deja |no me dejan |no me permite |no me deja que |no me dejan que |no me permite que |se puede |se pueden |donde )'
-            .'(?!(?<=no se )guardan?\b)(?!(?<=me |se |la )cargan?\b)';
+        $gradeExempt = '(?<!puedo |podemos |no logro |no me deja |no me dejan |no me permite |no me deja que |no me dejan que |no me permite que |se puede |se pueden |donde '
+            .'|como |como se |como debo |donde se |donde debo |ayuda para |ayudame a )'
+            .'(?!(?<=no se )guardan?\b)(?!(?<=me |se |la )cargan?\b)(?!(?<=el |del |mi |un |al |su )registro\s+de\b)';
+        // Calificar o evaluar a alumnos o a un grupo es escritura aunque no se diga «calificación».
+        $evaluateWrite = '(?:evalua|evaluar|evaluo|evaluan|evaluas|evalue|evaluen|evaluala|evalualas|evalualo|evalualos|evaluarla|evaluarlas|evaluarlo|evaluarlos'
+            .'|califica|calificar|califico|califican|calificas|califique|califiquen|calificala|calificalas|calificalo|calificalos|calificarla|calificarlas|calificarlo|calificarlos|calificale|calificales)';
 
         return [
             'NEGATED-REQUEST' => '~\b(?:nunca|tampoco)\b|\bno\b(?!\s+(?:se|sabemos|entiendo|recuerdo)\s+(?:como|donde)\b)'
@@ -95,7 +104,10 @@ final class IntentPatternCatalog
                 .'|se\s+(?:ve|ven|guarda|guardan|carga|cargan|muestra|muestran)'
                 .'|tengo(?:\s+(?:un|una|el|la|los|las|mi|mis|ningun|ninguna|ningunos|ningunas))*\s+(?:grupos?|alumnos?|alumnas?))\b)~u',
             'UNSUPPORTED-ATTENDANCE' => '~\b'.$attendanceWrite.'\b.*\basistencia\b~u',
-            'UNSUPPORTED-EVALUATION-WRITE' => '~^(?!.*\b(?:como|ayuda|ayudame)\b).*'.$gradeExempt.'\b'.$gradeWrite.'\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b~u',
+            // «cómo/ayuda» solo eximen el verbo que introducen (están en $gradeExempt), no toda la frase.
+            'UNSUPPORTED-EVALUATION-WRITE' => '~^.*'.$gradeExempt.'\b'.$gradeWrite.'\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b'
+                .'|^.*'.$gradeExempt.'\b(?:haz|hagan|haga|hacer|hago|realiza|realizar|realice|realicen|realizo)\s+el\s+registro\s+de\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b'
+                .'|^.*'.$gradeExempt.'\b'.$evaluateWrite.'\b.*\b(?:alumnos?|alumnas?|grupos?)\b~u',
         ];
     }
 }

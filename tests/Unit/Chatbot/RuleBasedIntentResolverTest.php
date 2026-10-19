@@ -141,6 +141,32 @@ class RuleBasedIntentResolverTest extends TestCase
             ['No me deja que registre las calificaciones', I::HowToRecordEvaluations],
             ['no me dejan que capture la evaluación', I::HowToRecordEvaluations],
             ['no me permite que meta las calificaciones', I::HowToRecordEvaluations],
+            // «registro de» como sustantivo tras artículo: reporte de un problema al registrar.
+            ['no puedo hacer el registro de calificaciones', I::HowToRecordEvaluations],
+            ['no puedo realizar el registro de calificaciones', I::HowToRecordEvaluations],
+            ['no me deja hacer el registro de las calificaciones', I::HowToRecordEvaluations],
+            ['ver el registro de calificaciones', I::ViewEvaluations],
+            ['consultar el registro de evaluaciones', I::ViewEvaluations],
+            ['muéstrame el registro de las calificaciones', I::ViewEvaluations],
+            ['no encuentro el registro de calificaciones', I::ViewEvaluations],
+            // Subjuntivo con «ingrese», preguntas impersonales y calificar/evaluar a alumnos o grupo.
+            ['no me deja que ingrese las calificaciones', I::HowToRecordEvaluations],
+            ['no me dejan que ingrese la evaluación', I::HowToRecordEvaluations],
+            ['¿Cómo se registran las calificaciones?', I::HowToRecordEvaluations],
+            ['¿dónde se capturan las evaluaciones?', I::HowToRecordEvaluations],
+            ['cómo se pone la calificación', I::HowToRecordEvaluations],
+            ['dónde se guardan las calificaciones', I::HowToRecordEvaluations],
+            ['¿cómo califico a mis alumnos?', I::HowToRecordEvaluations],
+            ['cómo evalúo a mis alumnos', I::HowToRecordEvaluations],
+            ['¿puedo calificar a mis alumnos?', I::HowToRecordEvaluations],
+            ['no puedo calificar a mis alumnos', I::HowToRecordEvaluations],
+            ['cómo califico al grupo', I::HowToRecordEvaluations],
+            // «cómo/ayuda» siguen eximiendo el verbo que introducen.
+            ['cómo puedo registrar las calificaciones', I::HowToRecordEvaluations],
+            ['cómo debo capturar las evaluaciones', I::HowToRecordEvaluations],
+            ['ayúdame a registrar las calificaciones', I::HowToRecordEvaluations],
+            ['ver las evaluaciones de mis alumnos', I::ViewEvaluations],
+            ['muéstrame la evaluación de mi grupo', I::ViewEvaluations],
             // «ingresar» en reporte y pregunta; guía y consultas que la regla de escritura ampliada no debe bloquear.
             ['No puedo ingresar las calificaciones', I::HowToRecordEvaluations],
             ['¿puedo ingresar calificaciones?', I::HowToRecordEvaluations],
@@ -181,7 +207,7 @@ class RuleBasedIntentResolverTest extends TestCase
             ['guarda las calificaciones de mi grupo'], ['pon 9 de calificación a un alumno'],
             ['no quiero registrar calificaciones'], ['registra las calificaciones, que yo no puedo'],
             ['no puedo registrar la asistencia'], ['guarda las calificaciones porque no me deja registrar'],
-            ['no puedo hacer el registro de calificaciones'], ['nunca puedo registrar calificaciones'],
+            ['nunca puedo registrar calificaciones'],
             ['no puedo no registrar calificaciones'], ['no sé si puedo registrar calificaciones'],
             // Pedir al chatbot que registre (segunda persona) sigue bloqueado, igual que la asistencia.
             ['puedes registrar las calificaciones de mi grupo'], ['¿me puedes registrar calificaciones?'],
@@ -254,6 +280,14 @@ class RuleBasedIntentResolverTest extends TestCase
             'califica la evaluación', 'calificar la evaluación', 'califiquen las evaluaciones',
             'ingresa las calificaciones', 'ingresen las evaluaciones', 'ingrésalas en calificaciones',
             'introduce las calificaciones', 'introduzca las calificaciones',
+            // «como/ayuda» en otra parte de la frase ya no eximen la orden.
+            'regístralas como calificaciones', 'registra las calificaciones de Juan como te dije',
+            'ayuda: registra las calificaciones', 'registra como calificación un 9', 'pon las calificaciones como te pedí',
+            // Calificar o evaluar a alumnos o grupo sin el sustantivo.
+            'califica a mis alumnos', 'evalúa a mis alumnos', 'evalúa al grupo', 'califiquen a los alumnos de mi grupo',
+            // «registro» como verbo u orden de «hacer el registro».
+            'registro las calificaciones de Juan', 'registro de calificaciones', 'haz el registro de calificaciones',
+            'realicen el registro de las evaluaciones',
         ]);
     }
 
