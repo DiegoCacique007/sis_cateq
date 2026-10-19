@@ -80,6 +80,16 @@ class NivelController extends Controller
     public function destroy($id)
     {
         $nivel = Nivel::findOrFail($id);
+
+        // El modelo también lo impide; aquí se explica qué datos tiene y cómo proceder sin perderlos.
+        if ($nivel->hasDependents()) {
+            $modulos = array_values(array_intersect_key(['unidades' => 'Unidades', 'asignacionesGrupo' => 'Asignar grupos'], $nivel->dependentCounts()));
+
+            return redirect()->route('secretaria.niveles.index')->with('error', 'No se puede eliminar el nivel '.$nivel->nivel
+                .' porque tiene '.$nivel->dependentsSummary().'. Si solo quieres corregir el nombre, edítalo.'
+                .' Para eliminarlo, primero cambia esos registros a otro nivel en '.implode(' y en ', $modulos).'.');
+        }
+
         $nivel->delete();
 
         return redirect()

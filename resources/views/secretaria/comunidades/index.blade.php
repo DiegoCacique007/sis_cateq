@@ -203,7 +203,7 @@
                             action="{{ route('secretaria.comunidades.destroy', $registro->id) }}"
                             method="POST"
                             class="d-inline js-delete-form"
-                            data-message="Esta acción eliminará la comunidad seleccionada."
+                            data-message="Esta acción eliminará la comunidad seleccionada. Si tiene datos asociados, no se eliminará."
                         >
                             @csrf
                             @method('DELETE')

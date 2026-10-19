@@ -216,7 +216,7 @@
                             action="{{ route('secretaria.rubros.destroy', $registro->id) }}"
                             method="POST"
                             class="d-inline js-delete-form"
-                            data-message="Esta acción eliminará el rubro seleccionado."
+                            data-message="Esta acción eliminará el rubro seleccionado. Si tiene datos asociados, no se eliminará."
                         >
                             @csrf
                             @method('DELETE')

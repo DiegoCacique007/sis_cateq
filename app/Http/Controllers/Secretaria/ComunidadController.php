@@ -85,6 +85,19 @@ class ComunidadController extends Controller
     public function destroy($id)
     {
         $comunidad = Comunidad::findOrFail($id);
+
+        // El modelo también lo impide; aquí se explica qué datos tiene y cómo proceder sin perderlos.
+        if ($comunidad->hasDependents()) {
+            $counts = $comunidad->dependentCounts();
+            $modulos = array_values(array_intersect_key(['alumnos' => 'Alumnos', 'asignacionesGrupo' => 'Asignar grupos'], $counts));
+            $mensaje = 'No se puede eliminar la comunidad '.$comunidad->comunidad.' porque tiene '.$comunidad->dependentsSummary().'.'
+                .' Si solo quieres corregir el nombre, edítala.'
+                .($modulos ? ' Para eliminarla, primero cambia esos registros a otra comunidad en '.implode(' y en ', $modulos).'.' : '')
+                .(isset($counts['usuarios']) ? ' Las cuentas de usuario con esta comunidad las cambia el encargado del sistema.' : '');
+
+            return redirect()->route('secretaria.comunidades.index')->with('error', $mensaje);
+        }
+
         $comunidad->delete();
 
         return redirect()

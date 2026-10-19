@@ -2,13 +2,22 @@
 
 namespace App\Models\Secretaria;
 
+use App\Models\Concerns\PreventsDeletionWithDependents;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Grupo extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, PreventsDeletionWithDependents, SoftDeletes;
+
+    protected function dependentRelations(): array
+    {
+        return [
+            'inscripciones' => ['inscripción', 'inscripciones'],
+            'asignacionesGrupo' => ['asignación de grupo', 'asignaciones de grupo'],
+        ];
+    }
 
     protected $table = 'grupos';
 

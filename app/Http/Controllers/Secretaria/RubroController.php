@@ -94,6 +94,14 @@ class RubroController extends Controller
     public function destroy($id)
     {
         $rubro = Rubro::findOrFail($id);
+
+        // El modelo también lo impide; las calificaciones registradas se conservan.
+        if ($rubro->hasDependents()) {
+            return redirect()->route('secretaria.rubros.index')->with('error', 'No se puede eliminar el rubro '.$rubro->nombre
+                .' porque tiene '.$rubro->dependentsSummary().'. Las calificaciones registradas se conservan.'
+                .' Si solo quieres corregir el nombre, edítalo.');
+        }
+
         $rubro->delete();
 
         return redirect()

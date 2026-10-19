@@ -136,6 +136,14 @@ class UnidadController extends Controller
     public function destroy($id)
     {
         $unidad = Unidad::findOrFail($id);
+
+        // El modelo también lo impide; las calificaciones registradas se conservan.
+        if ($unidad->hasDependents()) {
+            return redirect()->route('secretaria.unidades.index')->with('error', 'No se puede eliminar la '.$unidad->unidad_texto
+                .' porque tiene '.$unidad->dependentsSummary().'. Las calificaciones registradas se conservan.'
+                .' Si solo quieres corregir el nombre, edítala.');
+        }
+
         $unidad->delete();
 
         return redirect()

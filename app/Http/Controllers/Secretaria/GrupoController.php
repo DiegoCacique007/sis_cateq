@@ -91,6 +91,16 @@ class GrupoController extends Controller
     public function destroy($id)
     {
         $grupo = Grupo::findOrFail($id);
+
+        // El modelo también lo impide; aquí se explica qué datos tiene y cómo proceder sin perderlos.
+        if ($grupo->hasDependents()) {
+            $modulos = array_values(array_intersect_key(['inscripciones' => 'Inscripciones', 'asignacionesGrupo' => 'Asignar grupos'], $grupo->dependentCounts()));
+
+            return redirect()->route('secretaria.grupos.index')->with('error', 'No se puede eliminar el grupo '.$grupo->nombre
+                .' porque tiene '.$grupo->dependentsSummary().'. Si solo quieres corregir el nombre, edítalo.'
+                .' Para eliminarlo, primero cambia esos registros a otro grupo en '.implode(' y en ', $modulos).'.');
+        }
+
         $grupo->delete();
 
         return redirect()
