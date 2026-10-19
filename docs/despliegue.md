@@ -84,25 +84,56 @@ el `.env` del servidor.
 
 ## 5. Base de datos
 
+Las migraciones crean el esquema completo, incluidas las tablas académicas (migraciones
+`2026_01_01_*`). Cada migración de creación comprueba si su tabla ya existe: en una base que
+ya la tiene no hace nada y solo queda registrada. Su `down()` está vacío a propósito, para que
+un `migrate:rollback` nunca borre tablas con datos.
+
+### Instalación nueva
+
 1. Crea la base y el usuario de MySQL con permisos solo sobre ella.
-2. **Importa la estructura desde un volcado de la base actual.** El repositorio no contiene
-   las migraciones de creación de las tablas académicas (comunidades, periodos, niveles,
-   grupos, alumnos, inscripciones, evaluaciones...), así que `migrate` por sí solo no crea
-   una base completa.
-3. Revisa qué migraciones constan como aplicadas:
+2. Ejecuta las migraciones:
+
+   ```
+   php artisan migrate --force
+   ```
+
+3. Comprueba que todas aparecen como `Ran`:
 
    ```
    php artisan migrate:status
    ```
 
-4. Aplica solo las pendientes, una por una, con `--path`. Por ejemplo, la bitácora del
-   chatbot:
+### Instalación existente (anterior a las migraciones de creación)
+
+En una base creada antes de existir las migraciones `2026_01_01_*`, esas 11 aparecen como
+pendientes. Al ejecutarlas solo se añaden 11 filas a la tabla `migrations`: no se crean,
+alteran ni borran tablas, columnas ni datos. Aun así, ensáyalo primero en una copia.
+
+No uses `php artisan migrate --pretend` para comprobarlo: en ese modo las consultas de lectura
+no se ejecutan y la salida mostraría `CREATE TABLE` que en realidad nunca se ejecutarían.
+
+1. Copia de seguridad completa (estructura y datos), según el paso 10.
+2. Guarda la estructura actual, sin datos, para comparar:
 
    ```
-   php artisan migrate --path=database/migrations/2026_10_18_000001_create_chatbot_events_table.php
+   mysqldump --defaults-extra-file=/ruta/segura/respaldo.cnf --no-data --skip-dump-date nombre_base > estructura_antes.sql
    ```
 
-   No ejecutes `php artisan migrate` sin `--path` hasta haber revisado `migrate:status`.
+3. **Ensayo en una copia:**
+   - Crea una base `nombre_base_copia` y restaura en ella la copia de seguridad del paso 1.
+   - Pon temporalmente `DB_DATABASE=nombre_base_copia` en `.env` y ejecuta `php artisan config:clear`.
+   - Ejecuta `php artisan migrate:status`, `php artisan migrate --force` y otra vez
+     `php artisan migrate:status`: las 11 `2026_01_01_*` deben pasar a `Ran`.
+   - Vuelca la estructura de la copia con `--no-data --skip-dump-date` y compárala con
+     `estructura_antes.sql`: no debe haber diferencias.
+   - Devuelve `DB_DATABASE` a su valor y ejecuta `php artisan config:clear`.
+4. **En la base real:** haz otra copia de seguridad justo antes y ejecuta
+   `php artisan migrate:status`, `php artisan migrate --force` y `php artisan migrate:status`.
+5. Vuelca otra vez la estructura con `--no-data --skip-dump-date` y compárala con
+   `estructura_antes.sql`: no debe haber diferencias.
+
+Revisa siempre `php artisan migrate:status` antes de migrar.
 
 ## 6. Cuenta inicial de Secretaría (solo la primera vez)
 
@@ -199,7 +230,8 @@ php artisan schedule:list
 3. Actualiza el código.
 4. `composer install --no-dev --optimize-autoloader`
 5. `npm ci` y `npm run build`; borra `public/hot` si existe.
-6. `php artisan migrate:status` y aplica las migraciones pendientes con `--path` (paso 5).
+6. `php artisan migrate:status` y después `php artisan migrate --force` (con la copia de
+   seguridad del paso 2 ya hecha).
 7. `php artisan optimize:clear` y después `php artisan optimize`.
 8. `php artisan up`
 
@@ -207,7 +239,7 @@ php artisan schedule:list
 
 1. `php artisan about`: entorno `production`, depuración desactivada, cachés de
    configuración, rutas y vistas activas, idioma `es`.
-2. `php artisan migrate:status`: sin migraciones pendientes inesperadas.
+2. `php artisan migrate:status`: todas las migraciones aparecen como `Ran`.
 3. `php artisan schedule:list`: aparece `chatbot-events-purge`.
 4. La página de inicio de sesión carga con estilos (no existe `public/hot`).
 5. Una URL inexistente muestra «Página no encontrada», sin detalles técnicos.
@@ -235,3 +267,23 @@ php artisan schedule:list
 14. Una copia de seguridad se genera y se restaura correctamente en otro equipo.
 15. Si hay proxy: los intentos fallidos de inicio de sesión se cuentan con la IP real del
     visitante, no con la del proxy.
+
+## 13. Notas sobre el esquema
+
+Diferencias conocidas entre la base original de la parroquia y una instalación nueva, para que
+nadie se sorprenda al comparar estructuras:
+
+- **Índice duplicado `uq_users_email`.** La base original tiene dos índices únicos sobre
+  `users.email` (`users_email_unique` y `uq_users_email`). Las migraciones solo crean el primero;
+  el segundo es redundante.
+- **Migración registrada sin archivo.** La tabla `migrations` de la base original registra
+  `2026_04_28_060434_add_location_to_comunidades_table`, que no está en el repositorio. Laravel
+  ignora esa fila; solo fallaría un `migrate:rollback` de ese lote.
+- **Columnas de sacramentos.** `2026_05_01_000001_add_sacramentos_and_rbac_fields` ya no añade
+  las columnas `bautizo_*` y `primera_comunion_*` a `alumnos`: la base original no las tiene y
+  ningún código las usa.
+- **Pendiente: `inscripciones.estado`.** Los paneles de Párroco, Coordinador General y
+  Coordinador de Comunidades filtran inscripciones por una columna `estado` que la tabla
+  `inscripciones` no tiene. En MySQL o MariaDB esas consultas fallan con «Unknown column
+  'estado'». Está pendiente de corrección; mientras tanto, comprueba esos paneles después de
+  instalar o actualizar.
