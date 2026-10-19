@@ -25,6 +25,7 @@ use App\Http\Controllers\Secretaria\TutorController;
 // Párroco
 use App\Http\Controllers\Secretaria\UnidadController;
 // Coordinador General
+use App\Http\Controllers\Secretaria\UsuariosController;
 use App\Http\Controllers\Secretaria\UsuariosPendientesController;
 // Coordinador de Comunidades
 use Illuminate\Support\Facades\Route;
@@ -80,6 +81,10 @@ Route::middleware(['auth', 'approved', 'role:'.UserRole::Secretaria->value, \App
     Route::get('/usuarios/pendientes', [UsuariosPendientesController::class, 'index'])->name('usuarios.pendientes');
     Route::post('/usuarios/{user}/aprobar', [UsuariosPendientesController::class, 'aprobar'])->name('usuarios.aprobar');
     Route::post('/usuarios/{user}/bloquear', [UsuariosPendientesController::class, 'bloquear'])->name('usuarios.bloquear');
+    Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
+    Route::post('/usuarios/{user}/reactivar', [UsuariosController::class, 'reactivar'])->name('usuarios.reactivar');
+    Route::post('/usuarios/{user}/comunidad', [UsuariosController::class, 'comunidad'])->name('usuarios.comunidad');
+    Route::post('/usuarios/{user}/rol', [UsuariosController::class, 'rol'])->name('usuarios.rol');
 
     Route::resource('alumnos', AlumnoController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('/alumnos-comunidades', [AlumnoComunidadController::class, 'index'])->name('alumnos_comunidades.index');

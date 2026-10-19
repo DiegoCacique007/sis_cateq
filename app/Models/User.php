@@ -70,4 +70,12 @@ class User extends Authenticatable
     {
         return $this->belongsTo(\App\Models\Secretaria\Comunidad::class, 'comunidad_id');
     }
+
+    /**
+     * Asignaciones de grupo del catequista (de todos los periodos).
+     */
+    public function asignacionesGrupo()
+    {
+        return $this->hasMany(\App\Models\Secretaria\AsignaGrupo::class, 'catequista_id');
+    }
 }

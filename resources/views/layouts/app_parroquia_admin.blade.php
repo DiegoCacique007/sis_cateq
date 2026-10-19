@@ -499,6 +499,12 @@
                         <span>Usuarios pendientes</span>
                     </a>
 
+                    <a class="nav-link {{ request()->routeIs('secretaria.usuarios.index') ? 'active' : '' }}"
+                       href="{{ route('secretaria.usuarios.index') }}">
+                        <i class="bi bi-people"></i>
+                        <span>Cuentas de usuario</span>
+                    </a>
+
                     <button class="menu-toggle {{ $gestionEscolarActiva ? 'active' : '' }}"
                             type="button"
                             data-bs-toggle="collapse"

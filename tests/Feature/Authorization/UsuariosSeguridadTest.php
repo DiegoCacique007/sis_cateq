@@ -13,6 +13,14 @@ class UsuariosSeguridadTest extends CatequesisWebTestCase
 {
     private const MALICIOUS_NAME = "Ana');alert(1);//\"<script>alert(2)</script>";
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Bloquear registra el cambio en user_status_changes: la tabla se crea con su propia migración.
+        (require database_path('migrations/2026_10_19_000001_create_user_status_changes_table.php'))->up();
+    }
+
     public function test_secretaria_cannot_block_her_own_account(): void
     {
         $secretaria = $this->secretaria();

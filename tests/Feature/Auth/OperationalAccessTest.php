@@ -130,7 +130,7 @@ class OperationalAccessTest extends AuthTestCase
             }
         }
 
-        $this->assertSame(81, $count);
+        $this->assertSame(85, $count);
     }
 
     public function test_check_role_preserves_pipe_separated_roles(): void

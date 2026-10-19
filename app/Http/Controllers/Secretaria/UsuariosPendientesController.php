@@ -6,8 +6,9 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Secretaria\Comunidad;
 use App\Models\User;
+use App\Services\Accounts\AccountActionRejected;
+use App\Services\Accounts\AccountManager;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class UsuariosPendientesController extends Controller
@@ -57,38 +58,15 @@ class UsuariosPendientesController extends Controller
         return back()->with('status', 'Usuario aprobado correctamente.');
     }
 
-    public function bloquear(Request $request, User $user)
+    public function bloquear(Request $request, User $user, AccountManager $accounts)
     {
         abort_unless(auth()->user()->operationalRole() === UserRole::Secretaria, 403);
 
-        if ($user->is($request->user())) {
-            return back()->with('error', 'No puedes bloquear tu propia cuenta.');
+        // Mismas protecciones y registro que en «Cuentas de usuario».
+        try {
+            return back()->with('status', $accounts->block($request->user(), $user));
+        } catch (AccountActionRejected $rejected) {
+            return back()->with('error', $rejected->getMessage());
         }
-
-        $blocked = DB::transaction(function () use ($user) {
-            // Las filas de Secretaría aprobadas quedan bloqueadas hasta el final: dos bloqueos
-            // simultáneos no pueden dejar el sistema sin ninguna cuenta de Secretaría aprobada.
-            $otherSecretarias = User::where('role', UserRole::Secretaria->value)->where('status', 'aprobado')
-                ->whereKeyNot($user->getKey())->lockForUpdate()->count();
-            $target = User::whereKey($user->getKey())->lockForUpdate()->firstOrFail();
-
-            if ($target->isApprovedForAccess() && $target->operationalRole() === UserRole::Secretaria && $otherSecretarias === 0) {
-                return false;
-            }
-
-            $target->update([
-                'status' => 'bloqueado',
-                'approved_at' => null,
-                'approved_by' => null,
-            ]);
-
-            return true;
-        });
-
-        if (! $blocked) {
-            return back()->with('error', 'No se puede bloquear: debe quedar al menos una cuenta de Secretaría aprobada.');
-        }
-
-        return back()->with('status', 'Usuario bloqueado correctamente.');
     }
 }
