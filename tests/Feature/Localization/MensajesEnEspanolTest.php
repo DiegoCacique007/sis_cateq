@@ -107,8 +107,8 @@ class MensajesEnEspanolTest extends CatequesisWebTestCase
 
     public function test_own_controller_messages_take_priority_over_lang_files(): void
     {
-        $this->from('/login')->post('/login', ['email' => 'nadie@example.com', 'password' => 'x'])
-            ->assertSessionHasErrors(['email' => 'El correo electrónico no está registrado en el sistema.']);
+        $this->from('/forgot-password')->post('/forgot-password', ['email' => 'no-es-correo'])
+            ->assertSessionHasErrors(['email' => 'Ingresa un formato de correo electrónico válido.']);
     }
 
     /** Claves en notación de puntos, ordenadas, para comparar la estructura de dos archivos de idioma. */
