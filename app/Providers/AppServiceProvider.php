@@ -38,6 +38,17 @@ class AppServiceProvider extends ServiceProvider
                 \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 5)->by('register-email:'.($email !== '' ? $email : $request->ip()))->response($limited),
             ];
         });
+        // Recuperación de contraseña: 20 solicitudes por IP cada 10 minutos; depende solo de la IP, no revela qué correos existen.
+        \Illuminate\Support\Facades\RateLimiter::for('forgot-password', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 20)->by('forgot-password-ip:'.$request->ip())
+                ->response(function (\Illuminate\Http\Request $request, array $headers) {
+                    $message = 'Demasiadas solicitudes de recuperación de contraseña. Espera unos minutos e inténtalo de nuevo.';
+
+                    return $request->expectsJson()
+                        ? response()->json(['message' => $message, 'errors' => ['email' => [$message]]], 429, $headers)
+                        : redirect()->route('password.request')->withErrors(['email' => $message])->withInput($request->only('email'));
+                });
+        });
 
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
             if (auth()->check()) {

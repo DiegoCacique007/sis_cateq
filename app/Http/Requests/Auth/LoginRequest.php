@@ -43,6 +43,7 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->ipThrottleKey(), 600);
 
             // Un único mensaje: no revela si el correo está registrado.
             throw ValidationException::withMessages([
@@ -60,20 +61,35 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
-            return;
+        if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+            event(new Lockout($this));
+
+            $seconds = RateLimiter::availableIn($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.throttle', [
+                    'seconds' => $seconds,
+                    'minutes' => ceil($seconds / 60),
+                ]),
+            ]);
         }
 
-        event(new Lockout($this));
+        // Límite por IP: 30 intentos fallidos cada 10 minutos. Los accesos correctos no cuentan ni lo reinician.
+        if (RateLimiter::tooManyAttempts($this->ipThrottleKey(), 30)) {
+            event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+            throw ValidationException::withMessages([
+                'email' => 'Demasiados intentos de inicio de sesión. Espera unos minutos e inténtalo de nuevo.',
+            ]);
+        }
+    }
 
-        throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
-        ]);
+    /**
+     * Get the per-IP rate limiting key for failed login attempts.
+     */
+    public function ipThrottleKey(): string
+    {
+        return 'login-ip:'.$this->ip();
     }
 
     /**
