@@ -22,6 +22,22 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
         \Illuminate\Support\Facades\RateLimiter::for('chatbot', fn (\Illuminate\Http\Request $request) => \Illuminate\Cache\RateLimiting\Limit::perMinute(30)->by('chatbot:'.$request->user()->getAuthIdentifier()));
+        // Registro: 40 intentos por IP (red compartida de la parroquia) y 5 por correo, cada 10 minutos.
+        \Illuminate\Support\Facades\RateLimiter::for('register', function (\Illuminate\Http\Request $request) {
+            $email = is_string($request->input('email')) ? mb_strtolower(trim($request->input('email'))) : '';
+            $limited = function (\Illuminate\Http\Request $request, array $headers) {
+                $message = 'Demasiados intentos de registro. Espera unos minutos e inténtalo de nuevo.';
+
+                return $request->expectsJson()
+                    ? response()->json(['message' => $message, 'errors' => ['email' => [$message]]], 429, $headers)
+                    : redirect()->route('register')->withErrors(['email' => $message])->withInput($request->only('email'));
+            };
+
+            return [
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 40)->by('register-ip:'.$request->ip())->response($limited),
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 5)->by('register-email:'.($email !== '' ? $email : $request->ip()))->response($limited),
+            ];
+        });
 
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
             if (auth()->check()) {

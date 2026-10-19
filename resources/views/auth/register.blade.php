@@ -675,6 +675,18 @@
                     return;
                 }
 
+                if (response.status === 429) {
+                    const data = await response.json();
+
+                    await showError(
+                        'Demasiados intentos',
+                        data.message ?? 'Demasiados intentos de registro. Espera unos minutos e inténtalo de nuevo.'
+                    );
+
+                    setLoading(false);
+                    return;
+                }
+
                 if (response.status === 419) {
                     await showError(
                         'Sesión expirada',

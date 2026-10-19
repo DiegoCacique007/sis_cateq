@@ -54,9 +54,9 @@ class RegisteredUserController extends Controller
 
             'requested_role' => ['required', 'string'],
         ], [
-            'name.unique' => 'Este nombre completo ya se encuentra registrado en el sistema.',
+            'name.unique' => 'No es posible registrar este nombre. Si ya tienes una cuenta, inicia sesión; si no, contacta a Secretaría.',
             'name.required' => 'El nombre completo es obligatorio.',
-            'email.unique' => 'Este correo electrónico ya está registrado en el sistema. Si ya tienes cuenta, por favor inicia sesión.',
+            'email.unique' => 'No es posible registrar este correo electrónico. Si ya tienes una cuenta, inicia sesión o recupera tu contraseña.',
             'email.required' => 'El correo electrónico es obligatorio.',
             'email.email' => 'El correo electrónico no tiene un formato válido.',
             'password.required' => 'La contraseña es obligatoria.',
