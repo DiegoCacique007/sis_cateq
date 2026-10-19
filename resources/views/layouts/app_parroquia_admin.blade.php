@@ -599,6 +599,10 @@
 
         @auth
             <div class="mt-3 pt-3" style="border-top:1px solid rgba(255, 255, 255, 0.25);">
+                <a class="btn btn-outline-parroquia btn-sm w-100 mb-2" href="{{ route('cuenta.password.edit') }}">
+                    <i class="bi bi-key me-1"></i>
+                    Cambiar contraseña
+                </a>
                 <form id="logout-form" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="btn btn-outline-parroquia btn-sm w-100" type="button" onclick="window.AppAlert.confirmLogout().then(r => { if(r.isConfirmed) document.getElementById('logout-form').submit(); })">

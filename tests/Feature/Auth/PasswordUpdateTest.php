@@ -10,11 +10,11 @@ class PasswordUpdateTest extends AuthTestCase
 {
     public function test_password_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'catequista', 'status' => 'aprobado']);
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
+            ->from(route('cuenta.password.edit'))
             ->put('/password', [
                 'current_password' => 'password',
                 'password' => 'new-password',
@@ -23,7 +23,7 @@ class PasswordUpdateTest extends AuthTestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('cuenta.password.edit'));
 
         $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
         $this->assertAuthenticatedAs($user);
@@ -32,11 +32,11 @@ class PasswordUpdateTest extends AuthTestCase
 
     public function test_correct_password_must_be_provided_to_update_password(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'catequista', 'status' => 'aprobado']);
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
+            ->from(route('cuenta.password.edit'))
             ->put('/password', [
                 'current_password' => 'wrong-password',
                 'password' => 'new-password',
@@ -44,8 +44,8 @@ class PasswordUpdateTest extends AuthTestCase
             ]);
 
         $response
-            ->assertSessionHasErrorsIn('updatePassword', 'current_password')
-            ->assertRedirect('/profile');
+            ->assertSessionHasErrors('current_password')
+            ->assertRedirect(route('cuenta.password.edit'));
 
         $this->assertTrue(Hash::check('password', $user->refresh()->password));
     }

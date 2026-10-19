@@ -54,7 +54,13 @@ Route::middleware('auth')->group(function () {
 
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
-    Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+    Route::get('cuenta/contrasena', [PasswordController::class, 'edit'])
+        ->middleware(['approved', \App\Http\Middleware\NoCacheHeaders::class])
+        ->name('cuenta.password.edit');
+
+    Route::put('password', [PasswordController::class, 'update'])
+        ->middleware(['approved', \App\Http\Middleware\NoCacheHeaders::class, 'throttle:6,1'])
+        ->name('password.update');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');

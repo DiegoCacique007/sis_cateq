@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
             'periodo.activo' => \App\Http\Middleware\AsegurarPeriodoActivo::class,
         ]);
+        // Al cambiar la contraseña se cierran las demás sesiones del usuario; la sesión actual se conserva.
+        $middleware->web(append: \Illuminate\Session\Middleware\AuthenticateSession::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontReportWhen(fn (\Throwable $error) => request()->is('chatbot/message'));
