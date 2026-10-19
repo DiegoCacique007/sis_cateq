@@ -194,6 +194,13 @@ class EvaluacionController extends Controller
             'calificaciones' => ['required', 'array'],
             'calificaciones.*' => ['required', 'array', 'min:1'],
             'calificaciones.*.*' => ['nullable', 'numeric', 'min:0'],
+        ], [
+            // Sin :attribute: en las reglas con comodín el nombre del campo lleva claves enviadas por el cliente.
+            'calificaciones.*.required' => 'Faltan calificaciones de un alumno.',
+            'calificaciones.*.array' => 'El formato de calificaciones no es válido.',
+            'calificaciones.*.min' => 'Faltan calificaciones de un alumno.',
+            'calificaciones.*.*.numeric' => 'Cada calificación debe ser numérica.',
+            'calificaciones.*.*.min' => 'La calificación no puede ser menor a 0.',
         ]);
         DB::transaction(function () use ($request, $validated) {
             $http = app(CatequesisHttp::class);

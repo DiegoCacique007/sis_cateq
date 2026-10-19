@@ -363,8 +363,10 @@
             alert(title + ': ' + message); return Promise.resolve();
         },
         validation(errors) {
+            // Los mensajes pueden contener datos enviados por el usuario: se insertan escapados.
+            const escapeHtml = function(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); };
             let html = '<div style="text-align:left;font-size:12.5px;line-height:1.35;">';
-            Object.values(errors).forEach(function(items) { items.forEach(function(e) { html += '<div style="margin-bottom:4px;">• ' + e + '</div>'; }); });
+            Object.values(errors).forEach(function(items) { items.forEach(function(e) { html += '<div style="margin-bottom:4px;">• ' + escapeHtml(e) + '</div>'; }); });
             html += '</div>';
             if (window.Swal) { return Swal.fire({ position: 'center', icon: 'warning', title: 'Validación requerida', html: html, timer: 4300, timerProgressBar: true, showConfirmButton: false, width: '360px', customClass: { popup: 'small-formal-confirm' } }); }
             alert('Verifica la información ingresada.'); return Promise.resolve();

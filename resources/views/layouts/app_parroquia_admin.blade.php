@@ -727,11 +727,15 @@
         },
 
         validation(errors) {
+            // Los mensajes pueden contener datos enviados por el usuario: se insertan escapados.
+            const escapeHtml = function (value) {
+                return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            };
             let html = '<div style="text-align:left;font-size:12.5px;line-height:1.35;">';
 
             Object.values(errors).forEach(function (items) {
                 items.forEach(function (error) {
-                    html += '<div style="margin-bottom:4px;">• ' + error + '</div>';
+                    html += '<div style="margin-bottom:4px;">• ' + escapeHtml(error) + '</div>';
                 });
             });
 
