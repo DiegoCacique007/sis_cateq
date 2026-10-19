@@ -7,13 +7,19 @@ use Illuminate\Support\Facades\Route;
 
 final class ChatbotResponseFormatter
 {
-    public function format(AgentResponse $response): array
+    /** Estado público de la respuesta (el que recibe el navegador y registra la bitácora). */
+    public static function status(string $internal): string
     {
-        $status = match ($response->status) {
+        return match ($internal) {
             'OK' => 'success', 'DENIED' => 'denied', 'ESCALATE' => 'denied',
             'UNSUPPORTED' => 'unsupported', 'RESOURCE_SELECTION_REQUIRED' => 'selection_required',
             'MISSING_CONTEXT' => 'missing_context', 'AMBIGUOUS' => 'ambiguous', default => 'error',
         };
+    }
+
+    public function format(AgentResponse $response): array
+    {
+        $status = self::status($response->status);
         // El alcance solo elige la redacción; no se incluye en la salida.
         $scope = $response->metadata['scope'] ?? null;
         $message = match ($response->messageKey) {

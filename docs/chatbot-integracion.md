@@ -113,6 +113,33 @@ de los agentes y se muestra un aviso cuando hasMore es true; el resto se consult
 en el módulo. La UI no ofrece selección de inscripción/alumno/evaluación todavía,
 aunque el endpoint admite esos selectores para consumidores validados futuros.
 
+## Bitácora
+
+Mide qué solicitudes no se resuelven. ChatbotService registra un evento por respuesta
+en un único punto, al final de handle(), mediante ChatbotEventRecorder, que solo recibe
+datos ya proyectados. Tabla chatbot_events (migración propia, sin claves foráneas):
+
+- Se registra: occurred_on (solo el día, sin hora), role, intent, resolution (código
+  del resolvedor), guard (reglas que bloquearon: NEGATED-REQUEST, UNSUPPORTED-ATTENDANCE,
+  UNSUPPORTED-EVALUATION-WRITE), status y code de la respuesta, with_selection (si llegó
+  un recurso elegido) y, solo para NO_MATCH, message_shape: el mensaje normalizado con
+  toda palabra fuera del vocabulario cerrado de MessageShaper sustituida por «…»
+  («ver calificaciones de Juan Pérez» → «ver calificaciones de … …»).
+- No se registra: el texto del mensaje, el usuario, la IP, los ids de recursos, la hora
+  ni las peticiones rechazadas antes del servicio (401, 403 de cuenta, 419, 422 y 429).
+  El vocabulario no admite palabras que también sean nombres de persona; una prueba
+  verifica 30 nombres comunes con y sin acento.
+- Retención: 90 días; message_shape se vacía a los 30. ChatbotEvent::purgeExpired()
+  se ejecuta a diario (Schedule, nombre chatbot-events-purge, requiere schedule:run) y
+  al inicio de chatbot:report.
+- Consulta: php artisan chatbot:report {--days=30}, solo para quien tiene acceso de
+  consola; muestra conteos por rol, estado/código, resolución/regla e intención y las 20
+  formas no reconocidas más frecuentes. No hay ruta web ni permiso nuevo.
+- Fallo seguro: si la inserción falla (por ejemplo, tabla inexistente), se escribe
+  Log::warning('chatbot.event_failed', ['exception_class' => …]) y la respuesta HTTP y su
+  JSON no cambian. Crear la tabla en producción: php artisan migrate --path=database/
+  migrations/2026_10_18_000001_create_chatbot_events_table.php, tras revisar migrate:status.
+
 ## Interfaz y assets
 
 Un único components/chatbot.blade.php se incluye en los cinco layouts operativos,
