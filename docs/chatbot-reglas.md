@@ -377,9 +377,20 @@ Por requisito, frases nominales como «dar de alta alumno», «agregar tutor» y
    consulta o sustantivo («no me cargan las calificaciones», «ver la carga de
    calificaciones») y no bloquea. Huecos conocidos: la palabra «como» en la cláusula
    exime toda la guarda («regístralas como calificaciones»); escribir sin el
-   sustantivo («califica/evalúa a mis alumnos») resuelve VIEW_GROUP_STUDENTS;
-   UNSUPPORTED-ATTENDANCE conserva la lista corta («pasen/registre/marquen/anota/
-   tomen la lista de asistencia» resuelven VIEW_ATTENDANCE_LIST).
+   sustantivo («califica/evalúa a mis alumnos») resuelve VIEW_GROUP_STUDENTS.
+   UNSUPPORTED-ATTENDANCE usa también una lista explícita de registrar, capturar,
+   guardar, marcar, tomar, pasar, poner y anotar (infinitivo, 1.ª persona, tú, él,
+   ellos, usted(es) y enclíticos), sin «cargar» («no me carga la lista de asistencia»
+   es consulta) y sin los sustantivos «marco», «tomo» y «paso»: «pasen/registre/
+   marquen/anota/tomen la lista de asistencia» quedan bloqueadas, mientras «lista de
+   asistencia», «genera mi pdf de asistencia» o «No puedo descargar la lista de
+   asistencia» siguen en VIEW_ATTENDANCE_LIST. Si una sola guarda de escritura bloquea
+   la frase, ChatbotService responde con una explicación en lugar de «no disponible»:
+   ATTENDANCE_WRITE_UNSUPPORTED (el catequista recibe el enlace a Mi grupo; los demás
+   roles, que la asistencia se toma en papel, sin enlace) o GRADE_WRITE_UNSUPPORTED
+   (Catequista y Secretaría reciben el enlace a su módulo Evaluaciones; Párroco y
+   coordinadores, quién registra las calificaciones). Con ambas guardas, o solo la
+   negación, se mantiene UNKNOWN_INTENT.
    Una cláusula bloqueada impide una resolución final operativa del mensaje.
 5. Por cláusula, seleccionar todos los patrones de la categoría de mayor prioridad:
    modificación > orientación > consulta > ayuda. No elegir uno por orden del catálogo.

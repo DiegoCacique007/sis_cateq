@@ -14,8 +14,14 @@ final class ChatbotResponseFormatter
             'UNSUPPORTED' => 'unsupported', 'RESOURCE_SELECTION_REQUIRED' => 'selection_required',
             'MISSING_CONTEXT' => 'missing_context', 'AMBIGUOUS' => 'ambiguous', default => 'error',
         };
+        // El alcance solo elige la redacción; no se incluye en la salida.
+        $scope = $response->metadata['scope'] ?? null;
         $message = match ($response->messageKey) {
-            'chatbot.groups_ready' => 'Estas son tus asignaciones disponibles.',
+            'chatbot.groups_ready' => match ($scope) {
+                'community' => 'Estas son las asignaciones de tu comunidad en el periodo actual.',
+                'manager', 'supervisor' => 'Estas son las asignaciones del periodo actual.',
+                default => 'Estas son tus asignaciones disponibles.',
+            },
             'chatbot.students_ready' => 'Estos son los alumnos de la asignación seleccionada.',
             'chatbot.evaluations_ready' => 'Estas son las evaluaciones disponibles para tu selección.',
             'chatbot.help_ready' => 'Puedo ayudarte con estas consultas y procedimientos:',
@@ -30,6 +36,10 @@ final class ChatbotResponseFormatter
             'chatbot.boleta_by_secretary' => 'Las boletas las genera Secretaría. Solicítale la boleta del alumno.',
             'chatbot.attendance_by_catechist' => 'La asistencia se toma en papel con la lista que cada catequista descarga desde Mi grupo. El sistema no la registra.',
             'chatbot.grades_by_recorders' => 'Las calificaciones las registran el catequista del grupo y Secretaría en el módulo Evaluaciones. Para una corrección, acude a ellos.',
+            'chatbot.attendance_paper_own' => 'La asistencia se toma en papel con la lista que descargas desde Mi grupo. El sistema no la registra.',
+            'chatbot.grades_in_module' => 'El asistente no registra calificaciones. Puedes hacerlo en Evaluaciones.',
+            'chatbot.grades_not_recorded' => 'El asistente no registra calificaciones. Las registran el catequista del grupo y Secretaría.',
+            'chatbot.boleta_in_module' => 'Las boletas se generan en el módulo Boletas: filtra por grupo y elige al alumno.',
             'chatbot.function_unavailable' => 'Esta solicitud no está disponible. Prueba con «¿Qué puedes hacer?».',
             'chatbot.clarify_intent' => 'Identifiqué varias solicitudes. Escribe una sola consulta para continuar.',
             'chatbot.inconsistent_assignment' => 'La asignación tiene datos inconsistentes. Solicita su revisión antes de continuar.',
@@ -54,8 +64,6 @@ final class ChatbotResponseFormatter
             $items[] = $this->intentLabel($intent);
         }
         $options = array_map(fn ($group) => ['id' => $group['assignmentId'], 'label' => $this->groupLabel($group)], $response->data['options'] ?? []);
-        // El alcance solo elige la redacción de una respuesta vacía; no se incluye en la salida.
-        $scope = $response->metadata['scope'] ?? null;
         if ($status === 'selection_required' && ! $options) {
             $message = $this->emptyMessage('assignments', $scope)
                 ?? 'No hay asignaciones disponibles para seleccionar en este contexto. Solicita una revisión a Secretaría.';

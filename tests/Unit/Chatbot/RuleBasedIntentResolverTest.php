@@ -201,6 +201,40 @@ class RuleBasedIntentResolverTest extends TestCase
         ];
     }
 
+    /** Cada forma de escritura de asistencia debe detectarla UNSUPPORTED-ATTENDANCE. */
+    public static function attendanceWriteForms(): array
+    {
+        return array_map(fn ($message) => [$message], [
+            'pasen la lista de asistencia', 'registre la lista de asistencia', 'marquen la asistencia en la lista de asistencia',
+            'anota la lista de asistencia', 'tomen la lista de asistencia', 'pon la asistencia de mi grupo', 'registren la asistencia',
+            'capturen la asistencia', 'guarden la asistencia', 'márcala en la asistencia', 'tómala como asistencia de hoy',
+            'pasa la asistencia', 'anote la asistencia', 'ponga la asistencia',
+        ]);
+    }
+
+    #[DataProvider('attendanceWriteForms')]
+    public function test_every_attendance_write_form_is_detected_by_attendance_guard(string $message): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve($message);
+        $this->assertSame(I::Unknown, $result->intent);
+        $this->assertSame('UNSUPPORTED_REQUEST', $result->code);
+        $this->assertContains('UNSUPPORTED-ATTENDANCE', $result->matchedPatterns);
+    }
+
+    public static function attendanceReads(): array
+    {
+        return [['No puedo descargar la lista de asistencia'], ['genera mi pdf de asistencia'], ['consultar asistencia'],
+            ['cómo veo mi lista de asistencia'], ['no me carga la lista de asistencia'], ['quiero ver la lista de asistencia que pasé'], ['lista de asistencia']];
+    }
+
+    #[DataProvider('attendanceReads')]
+    public function test_attendance_reads_are_not_blocked(string $message): void
+    {
+        $result = (new RuleBasedIntentResolver)->resolve($message);
+        $this->assertSame(I::ViewAttendanceList, $result->intent);
+        $this->assertNotContains('UNSUPPORTED-ATTENDANCE', $result->matchedPatterns);
+    }
+
     /** Cada forma de escritura de calificaciones debe detectarla UNSUPPORTED-EVALUATION-WRITE. */
     public static function gradeWriteForms(): array
     {

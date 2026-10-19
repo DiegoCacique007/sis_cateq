@@ -5,6 +5,7 @@ namespace App\Services\Chatbot;
 use App\Services\Authorization\AccessContextResolver;
 use App\Services\Chatbot\Agents\AgentRequest;
 use App\Services\Chatbot\Agents\AgentResponse;
+use App\Services\Chatbot\Agents\EscalationAgent;
 use App\Services\Chatbot\Contracts\IntentResolver;
 use App\Services\Chatbot\Routing\AgentRegistry;
 use App\Services\Chatbot\Rules\ChatbotFacts;
@@ -30,6 +31,11 @@ final class ChatbotService
             $resolution = $this->intents->resolve($message);
             if ($resolution->ambiguous) {
                 return new AgentResponse('AMBIGUOUS', 'AMBIGUOUS_INTENT', 'chatbot.clarify_intent');
+            }
+            // Bloqueo por una única guarda de escritura: explicar en lugar de «no disponible». Sin datos.
+            $writeGuards = array_values(array_intersect($resolution->matchedPatterns, EscalationAgent::WRITE_GUARDS));
+            if ($resolution->code === 'UNSUPPORTED_REQUEST' && count($writeGuards) === 1) {
+                return EscalationAgent::blockedWrite($writeGuards[0], $context->role);
             }
             $facts = new ChatbotFacts($context, $resolution->intent, $assignmentId, $inscriptionId, $studentId, $evaluationId);
             $agentRequest = AgentRequest::evaluate($facts, $this->engine);

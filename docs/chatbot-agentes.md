@@ -219,10 +219,23 @@ producen respuestas iguales y vacías de datos personales. No se envían mensaje
 Los rechazos orientan según la decisión del motor, sin consultas ni permisos nuevos:
 ROLE_NOT_ALLOWED elige el texto por la capacidad rechazada (VIEW_BOLETAS,
 VIEW_ATTENDANCE_LIST, MANAGE_EVALUATIONS); EXECUTION_UNSUPPORTED con MANAGE_STUDENTS
-(solo lo alcanza quien posee esa capacidad) enlaza al módulo Alumnos. handle() pasa a
-response() el rol del contexto del servidor únicamente para no derivar al responsable
-recomendado a sí mismo (ESCALATE de Secretaría); sin rol (revalidación en AgentGate)
-se conserva el texto y la canalización genéricos. El rol nunca concede acceso.
+(solo lo alcanza quien posee esa capacidad) enlaza al módulo Alumnos; MISSING_RESOURCE
+con VIEW_BOLETAS enlaza al módulo Boletas del propio rol. handle() y AgentGate pasan a
+response() el rol del contexto del servidor para elegir el texto y el enlace y para no
+derivar al responsable recomendado a sí mismo (ESCALATE de Secretaría); una llamada
+directa sin rol conserva el texto y la canalización genéricos. El rol nunca concede acceso.
+
+AgentGate solo vuelve a EscalationAgent cuando un agente reevalúa y la decisión ya no es
+ALLOWED: en el flujo normal AgentRegistry ya envía allí todo lo no permitido, así que
+ocurre por invocación directa, por un cambio de datos dentro de la misma petición o por
+INTENT_NOT_SUPPORTED.
+
+Las escrituras bloqueadas por el resolvedor tienen explicación propia: si una frase es
+UNSUPPORTED_REQUEST por exactamente una guarda de escritura (EscalationAgent::WRITE_GUARDS),
+ChatbotService responde con EscalationAgent::blockedWrite(), sin datos ni consultas:
+ATTENDANCE_WRITE_UNSUPPORTED (UNSUPPORTED-ATTENDANCE) o GRADE_WRITE_UNSUPPORTED
+(UNSUPPORTED-EVALUATION-WRITE), con estado unsupported. Si coinciden ambas guardas, o
+solo la negación, se mantiene la respuesta genérica UNKNOWN_INTENT.
 
 ## Mensajes al usuario
 
@@ -236,7 +249,15 @@ Los textos viven en ChatbotResponseFormatter. Rechazos y orientación:
 | Boleta (ROLE_NOT_ALLOWED) | Catequista | Las boletas las genera Secretaría. Solicítale la boleta del alumno. |
 | Lista de asistencia (ROLE_NOT_ALLOWED) | Secretaría y supervisión | La asistencia se toma en papel con la lista que cada catequista descarga desde Mi grupo. El sistema no la registra. |
 | Registrar calificaciones (ROLE_NOT_ALLOWED) | Párroco y coordinadores | Las calificaciones las registran el catequista del grupo y Secretaría en el módulo Evaluaciones. Para una corrección, acude a ellos. |
-| Guía de calificaciones, paso 1 | Catequista | Entra a Evaluaciones y selecciona el grupo asignado y la unidad; si no aparece ningún grupo, revisa el periodo de trabajo o solicita tu asignación a Secretaría. |
+| Boleta sin alumno elegido (MISSING_RESOURCE) | Secretaría y supervisión | Las boletas se generan en el módulo Boletas: filtra por grupo y elige al alumno. (+ enlace «Abrir módulo» a Boletas del propio rol) |
+| Asistencia bloqueada (ATTENDANCE_WRITE_UNSUPPORTED) | Catequista | La asistencia se toma en papel con la lista que descargas desde Mi grupo. El sistema no la registra. (+ enlace «Abrir módulo» a Mi grupo) |
+| Asistencia bloqueada (ATTENDANCE_WRITE_UNSUPPORTED) | Secretaría y supervisión | La asistencia se toma en papel con la lista que cada catequista descarga desde Mi grupo. El sistema no la registra. |
+| Calificaciones bloqueadas (GRADE_WRITE_UNSUPPORTED) | Catequista y Secretaría | El asistente no registra calificaciones. Puedes hacerlo en Evaluaciones. (+ enlace «Abrir módulo» a su propio módulo Evaluaciones) |
+| Calificaciones bloqueadas (GRADE_WRITE_UNSUPPORTED) | Párroco y coordinadores | El asistente no registra calificaciones. Las registran el catequista del grupo y Secretaría. |
+| Guía de calificaciones, paso 1 | Catequista | Entra a Evaluaciones y selecciona el grupo asignado y la unidad; si no aparece ningún grupo, comprueba que sea el periodo correcto o solicita tu asignación a Secretaría. |
+| Grupos con datos | Catequista | Estas son tus asignaciones disponibles. |
+| Grupos con datos | Coord. Comunidades | Estas son las asignaciones de tu comunidad en el periodo actual. |
+| Grupos con datos | Secretaría, Párroco, Coord. General | Estas son las asignaciones del periodo actual. |
 
 Las listas vacías se redactan según el alcance del contexto ya resuelto
 (AssignmentOptions::scope): own = Catequista, community = Coordinador de Comunidades,

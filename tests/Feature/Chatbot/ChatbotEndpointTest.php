@@ -337,8 +337,10 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
     {
         $this->login();
         $this->postJson(route('chatbot.message'), ['message' => 'guarda las calificaciones porque no me deja registrar'])
-            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
-            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'GRADE_WRITE_UNSUPPORTED')
+            ->assertJsonPath('message', 'El asistente no registra calificaciones. Puedes hacerlo en Evaluaciones.')
+            ->assertJsonPath('data.items', [])
+            ->assertJsonPath('actions', [['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => '/catequista/evaluaciones']]);
     }
 
     #[DataProvider('evaluationRecorders')]
@@ -389,19 +391,23 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         $this->assertStringContainsString('Acude a Secretaría.', $response->json('message'));
     }
 
+    /** [frase, código, enlace esperado para Secretaría o null]. */
     public static function botDirectedGradeWrites(): array
     {
-        return [['puedes registrar las calificaciones de mi grupo'], ['¿me puedes registrar calificaciones?'],
-            ['¿podrías registrar las calificaciones?'], ['¿dónde registro la asistencia?']];
+        $grade = ['GRADE_WRITE_UNSUPPORTED', '/secretaria/evaluaciones'];
+
+        return [['puedes registrar las calificaciones de mi grupo', ...$grade], ['¿me puedes registrar calificaciones?', ...$grade],
+            ['¿podrías registrar las calificaciones?', ...$grade], ['¿dónde registro la asistencia?', 'ATTENDANCE_WRITE_UNSUPPORTED', null]];
     }
 
     #[DataProvider('botDirectedGradeWrites')]
-    public function test_asking_bot_to_write_stays_unsupported_without_data(string $message): void
+    public function test_asking_bot_to_write_stays_unsupported_without_data(string $message, string $code, ?string $url): void
     {
         $this->login(R::Secretaria);
         $this->postJson(route('chatbot.message'), ['message' => $message])
-            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
-            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', $code)
+            ->assertJsonPath('data.items', [])
+            ->assertJsonPath('actions', $url ? [['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => $url]] : []);
     }
 
     #[DataProvider('evaluationRecorders')]
@@ -518,8 +524,13 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
     {
         $context = $this->login($role);
         $ids = $this->records($context);
+        $groups = match ($role) {
+            R::Catequista => 'Estas son tus asignaciones disponibles.',
+            R::CoordinadorComunidades => 'Estas son las asignaciones de tu comunidad en el periodo actual.',
+            default => 'Estas son las asignaciones del periodo actual.',
+        };
         $this->postJson(route('chatbot.message'), ['message' => 'mis grupos'])
-            ->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('message', 'Estas son tus asignaciones disponibles.');
+            ->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('message', $groups);
         $this->postJson(route('chatbot.message'), ['message' => 'mis alumnos'])
             ->assertOk()->assertJsonPath('message', 'Selecciona una asignación para continuar.');
         $this->postJson(route('chatbot.message'), ['message' => 'mis alumnos', 'assignment_id' => $ids['assignment']])
@@ -578,19 +589,24 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
             ->assertOk()->assertJsonPath('status', 'success')->assertJsonCount(1, 'data.items');
     }
 
+    /** [frase, código, enlace esperado para Secretaría o null]. */
     public static function blockedImpersonalWrites(): array
     {
-        return [['no se registra la calificación'], ['no se pone la calificación'], ['no se guarda la asistencia'],
-            ['mete las calificaciones de mi grupo'], ['No funciona'], ['No me sale nada']];
+        $grade = ['GRADE_WRITE_UNSUPPORTED', '/secretaria/evaluaciones'];
+
+        return [['no se registra la calificación', ...$grade], ['no se pone la calificación', ...$grade],
+            ['no se guarda la asistencia', 'ATTENDANCE_WRITE_UNSUPPORTED', null], ['mete las calificaciones de mi grupo', ...$grade],
+            ['No funciona', 'UNKNOWN_INTENT', null], ['No me sale nada', 'UNKNOWN_INTENT', null]];
     }
 
     #[DataProvider('blockedImpersonalWrites')]
-    public function test_blocked_or_unrecognized_reports_stay_unsupported_without_data(string $message): void
+    public function test_blocked_or_unrecognized_reports_stay_unsupported_without_data(string $message, string $code, ?string $url): void
     {
         $this->login(R::Secretaria);
         $this->postJson(route('chatbot.message'), ['message' => $message])
-            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
-            ->assertJsonPath('data.items', [])->assertJsonPath('actions', []);
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', $code)
+            ->assertJsonPath('data.items', [])
+            ->assertJsonPath('actions', $url ? [['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => $url]] : []);
     }
 
     #[DataProvider('evaluationRecorders')]
@@ -600,8 +616,9 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         $this->records($context);
         foreach (['carga las calificaciones', 'ingresa las calificaciones', 'ponle 9 de calificación a Juan', 'registren las calificaciones'] as $message) {
             $this->postJson(route('chatbot.message'), ['message' => $message])
-                ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
-                ->assertJsonPath('data.items', [])->assertJsonPath('data.options', [])->assertJsonPath('actions', []);
+                ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'GRADE_WRITE_UNSUPPORTED')
+                ->assertJsonPath('data.items', [])->assertJsonPath('data.options', [])
+                ->assertJsonPath('actions', [['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => $url]]);
         }
         $this->postJson(route('chatbot.message'), ['message' => 'No puedo ingresar las calificaciones'])
             ->assertOk()->assertJsonPath('code', 'GUIDANCE_READY')->assertJsonPath('actions.0.url', $url);
@@ -623,19 +640,33 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         $change = 'El asistente no modifica datos. Realiza el cambio desde el módulo correspondiente.';
         $escalate = 'Esta operación requiere atención en el módulo correspondiente. Acude a Secretaría.';
         $boleta = 'Las boletas las genera Secretaría. Solicítale la boleta del alumno.';
-        $missing = 'Falta seleccionar un recurso. Realiza la consulta en el módulo correspondiente.';
         $attendance = 'La asistencia se toma en papel con la lista que cada catequista descarga desde Mi grupo. El sistema no la registra.';
         $select = 'Selecciona una asignación para continuar.';
         $grades = 'Las calificaciones las registran el catequista del grupo y Secretaría en el módulo Evaluaciones. Para una corrección, acude a ellos.';
         $guidance = 'Sigue estos pasos en el módulo del sistema. No realizaré cambios desde el chat.';
+        $boletaModule = 'Las boletas se generan en el módulo Boletas: filtra por grupo y elige al alumno.';
+        $paperOwn = 'La asistencia se toma en papel con la lista que descargas desde Mi grupo. El sistema no la registra.';
+        $gradesInModule = 'El asistente no registra calificaciones. Puedes hacerlo en Evaluaciones.';
+        $gradesNotRecorded = 'El asistente no registra calificaciones. Las registran el catequista del grupo y Secretaría.';
         $supervisors = [R::Parroco, R::CoordinadorGeneral, R::CoordinadorComunidades];
+        $boletaUrl = [R::Parroco->value => '/parroco/boletas', R::CoordinadorGeneral->value => '/coordinador-general/boletas',
+            R::CoordinadorComunidades->value => '/coordinador-comunidades/boletas'];
         $cases = [
-            'editar: secretaria' => ['No me deja editar un alumno', R::Secretaria, 'unsupported', 'EXECUTION_UNSUPPORTED', $edit],
+            'editar: secretaria' => ['No me deja editar un alumno', R::Secretaria, 'unsupported', 'EXECUTION_UNSUPPORTED', $edit, '/secretaria/alumnos'],
+            // Punto 1: asistencia bloqueada; solo el catequista recibe enlace a Mi grupo.
+            'asistencia bloqueada: catequista' => ['pasen la lista de asistencia', R::Catequista, 'unsupported', 'ATTENDANCE_WRITE_UNSUPPORTED', $paperOwn, '/catequista/mi-grupo'],
+            'asistencia bloqueada: secretaria' => ['pasen la lista de asistencia', R::Secretaria, 'unsupported', 'ATTENDANCE_WRITE_UNSUPPORTED', $attendance],
+            // Punto 2: calificaciones bloqueadas; Catequista y Secretaría reciben enlace a su propio módulo.
+            'calificaciones bloqueadas: catequista' => ['registra calificaciones', R::Catequista, 'unsupported', 'GRADE_WRITE_UNSUPPORTED', $gradesInModule, '/catequista/evaluaciones'],
+            'calificaciones bloqueadas: secretaria' => ['registra calificaciones', R::Secretaria, 'unsupported', 'GRADE_WRITE_UNSUPPORTED', $gradesInModule, '/secretaria/evaluaciones'],
+            // Punto 5: grupos con datos según el alcance.
+            'grupos: catequista' => ['mis grupos', R::Catequista, 'success', 'VIEW_MY_GROUPS_READY', 'Estas son tus asignaciones disponibles.'],
+            'grupos: secretaria' => ['mis grupos', R::Secretaria, 'success', 'VIEW_MY_GROUPS_READY', 'Estas son las asignaciones del periodo actual.'],
             'editar: catequista' => ['No me deja editar un alumno', R::Catequista, 'denied', 'ROLE_NOT_ALLOWED', $denied],
             'escalar: secretaria' => ['quiero corregir información administrativa', R::Secretaria, 'denied', 'ADMINISTRATIVE_EXECUTION_UNSUPPORTED', $change],
             'escalar: catequista' => ['quiero corregir información administrativa', R::Catequista, 'denied', 'ADMINISTRATIVE_EXECUTION_UNSUPPORTED', $escalate],
             'boleta: catequista' => ['descargar boleta', R::Catequista, 'denied', 'ROLE_NOT_ALLOWED', $boleta],
-            'boleta: secretaria' => ['descargar boleta', R::Secretaria, 'missing_context', 'MISSING_RESOURCE', $missing],
+            'boleta: secretaria' => ['descargar boleta', R::Secretaria, 'missing_context', 'MISSING_RESOURCE', $boletaModule, '/secretaria/boletas'],
             'asistencia: catequista' => ['lista de asistencia', R::Catequista, 'selection_required', 'ASSIGNMENT_SELECTION_REQUIRED', $select],
             'asistencia: secretaria' => ['lista de asistencia', R::Secretaria, 'denied', 'ROLE_NOT_ALLOWED', $attendance],
             'calificaciones: catequista' => ['¿Cómo registro calificaciones?', R::Catequista, 'success', 'GUIDANCE_READY', $guidance],
@@ -644,16 +675,20 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         foreach ($supervisors as $role) {
             $cases['editar: '.$role->value] = ['No me deja editar un alumno', $role, 'denied', 'ROLE_NOT_ALLOWED', $denied];
             $cases['escalar: '.$role->value] = ['quiero corregir información administrativa', $role, 'denied', 'ADMINISTRATIVE_EXECUTION_UNSUPPORTED', $escalate];
-            $cases['boleta: '.$role->value] = ['descargar boleta', $role, 'missing_context', 'MISSING_RESOURCE', $missing];
+            $cases['boleta: '.$role->value] = ['descargar boleta', $role, 'missing_context', 'MISSING_RESOURCE', $boletaModule, $boletaUrl[$role->value]];
             $cases['asistencia: '.$role->value] = ['lista de asistencia', $role, 'denied', 'ROLE_NOT_ALLOWED', $attendance];
             $cases['calificaciones: '.$role->value] = ['¿Cómo registro calificaciones?', $role, 'denied', 'ROLE_NOT_ALLOWED', $grades];
+            $cases['asistencia bloqueada: '.$role->value] = ['pasen la lista de asistencia', $role, 'unsupported', 'ATTENDANCE_WRITE_UNSUPPORTED', $attendance];
+            $cases['calificaciones bloqueadas: '.$role->value] = ['registra calificaciones', $role, 'unsupported', 'GRADE_WRITE_UNSUPPORTED', $gradesNotRecorded];
+            $cases['grupos: '.$role->value] = ['mis grupos', $role, 'success', 'VIEW_MY_GROUPS_READY', $role === R::CoordinadorComunidades
+                ? 'Estas son las asignaciones de tu comunidad en el periodo actual.' : 'Estas son las asignaciones del periodo actual.'];
         }
 
         return $cases;
     }
 
     #[DataProvider('orientedResponses')]
-    public function test_oriented_responses_have_exact_text_per_role(string $message, R $role, string $status, string $code, string $text): void
+    public function test_oriented_responses_have_exact_text_per_role(string $message, R $role, string $status, string $code, string $text, ?string $url = null): void
     {
         $context = $this->login($role);
         $this->records($context);
@@ -662,19 +697,28 @@ class ChatbotEndpointTest extends CatequesisWebTestCase
         if ($status !== 'success' && $status !== 'selection_required') {
             $this->assertSame([], $response->json('data.items'));
         }
+        // El enlace solo aparece para el rol indicado en el caso; el resto de rechazos y bloqueos no enlaza.
         $navigate = array_values(array_filter($response->json('actions'), fn ($a) => $a['type'] === 'navigate'));
-        if ($text === 'El asistente no modifica datos. Edita el alumno desde el módulo Alumnos.') {
-            $this->assertSame([['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => '/secretaria/alumnos']], $navigate);
+        if ($url !== null) {
+            $this->assertSame([['type' => 'navigate', 'label' => 'Abrir módulo', 'url' => $url]], $navigate);
         } elseif ($status !== 'success') {
-            $this->assertSame([], $navigate, 'Solo Secretaría recibe enlace en un rechazo o bloqueo.');
+            $this->assertSame([], $navigate, 'Este rol no debe recibir enlace en un rechazo o bloqueo.');
         }
+    }
+
+    public function test_message_mixing_both_write_guards_keeps_generic_response(): void
+    {
+        $this->login(R::Secretaria);
+        $this->postJson(route('chatbot.message'), ['message' => 'registra la asistencia y registra las calificaciones'])
+            ->assertOk()->assertJsonPath('status', 'unsupported')->assertJsonPath('code', 'UNKNOWN_INTENT')
+            ->assertJsonPath('actions', [])->assertJsonPath('data.items', []);
     }
 
     public function test_catechist_grade_guidance_first_step_mentions_missing_group(): void
     {
         $this->login();
         $this->postJson(route('chatbot.message'), ['message' => '¿Cómo registro calificaciones?'])->assertOk()
-            ->assertJsonPath('data.items.0', 'Entra a Evaluaciones y selecciona el grupo asignado y la unidad; si no aparece ningún grupo, revisa el periodo de trabajo o solicita tu asignación a Secretaría.')
+            ->assertJsonPath('data.items.0', 'Entra a Evaluaciones y selecciona el grupo asignado y la unidad; si no aparece ningún grupo, comprueba que sea el periodo correcto o solicita tu asignación a Secretaría.')
             ->assertJsonCount(3, 'data.items');
     }
 

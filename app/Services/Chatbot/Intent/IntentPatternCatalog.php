@@ -77,6 +77,15 @@ final class IntentPatternCatalog
         // Un reporte o pregunta propia («no me deja (que)…», «puedo…», «se puede…», «dónde…») solo exime al
         // verbo que le sigue inmediatamente; «puedes/podrías» (pedir al chatbot) sigue bloqueando.
         // Del impersonal solo se exime «no se guarda(n)»; «carga(n)» tras «me/se/la» es consulta o sustantivo.
+        // Escritura de asistencia: sin «cargar» (consulta) ni los sustantivos «marco», «tomo», «paso».
+        $attendanceWrite = '(?:registra|registrar|registro|registran|registras|registre|registren|registrala|registralas'
+            .'|captura|capturar|capturo|capturan|capturas|capture|capturen|capturala|capturalas'
+            .'|guarda|guardar|guardo|guardan|guardas|guarde|guarden|guardala|guardalas'
+            .'|marca|marcar|marcan|marcas|marque|marquen|marcala|marcalas'
+            .'|toma|tomar|toman|tomas|tome|tomen|tomala|tomalas'
+            .'|pasa|pasar|pasan|pasas|pase|pasen|pasala|pasalas'
+            .'|pon|poner|pongo|pone|ponen|pones|ponga|pongan|ponle|ponla|ponlas'
+            .'|anota|anotar|anoto|anotan|anotas|anote|anoten|anotala|anotalas)';
         $gradeExempt = '(?<!puedo |podemos |no logro |no me deja |no me dejan |no me permite |no me deja que |no me dejan que |no me permite que |se puede |se pueden |donde )'
             .'(?!(?<=no se )guardan?\b)(?!(?<=me |se |la )cargan?\b)';
 
@@ -85,7 +94,7 @@ final class IntentPatternCatalog
                 .'(?!\s+(?:puedo|podemos|logro|me\s+deja|me\s+dejan|me\s+permite|(?:me\s+)?(?:aparece|aparecen|sale|salen|carga|cargan|muestra|muestran)|encuentro|veo'
                 .'|se\s+(?:ve|ven|guarda|guardan|carga|cargan|muestra|muestran)'
                 .'|tengo(?:\s+(?:un|una|el|la|los|las|mi|mis|ningun|ninguna|ningunos|ningunas))*\s+(?:grupos?|alumnos?|alumnas?))\b)~u',
-            'UNSUPPORTED-ATTENDANCE' => '~\b(?:registra|registrar|registro|captura|capturar|capturo|guarda|guardar|marca|marcar|toma|tomar|pasa|pasar)\b.*\basistencia\b~u',
+            'UNSUPPORTED-ATTENDANCE' => '~\b'.$attendanceWrite.'\b.*\basistencia\b~u',
             'UNSUPPORTED-EVALUATION-WRITE' => '~^(?!.*\b(?:como|ayuda|ayudame)\b).*'.$gradeExempt.'\b'.$gradeWrite.'\b.*\b(?:calificacion|calificaciones|evaluacion|evaluaciones)\b~u',
         ];
     }

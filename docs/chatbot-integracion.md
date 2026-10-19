@@ -80,6 +80,14 @@ el catálogo completo está en chatbot-agentes.md, sección «Mensajes al usuari
 Las listas vacías ya no responden «No se encontraron registros.» en grupos, alumnos
 ni evaluaciones; ese texto genérico queda solo como respaldo sin alcance.
 
+Códigos de escritura bloqueada (estado unsupported, sin datos): ATTENDANCE_WRITE_UNSUPPORTED
+y GRADE_WRITE_UNSUPPORTED. Sustituyen a UNKNOWN_INTENT cuando la frase la bloquea una
+sola guarda de escritura del resolvedor; pueden traer una acción navigate al módulo del
+propio rol (Mi grupo o Evaluaciones). La boleta sin alumno elegido conserva
+missing_context/MISSING_RESOURCE y añade navigate al módulo Boletas del rol. chatbot.js
+no lee el código: muestra el mensaje y cualquier navigate del mismo origen sea cual sea
+el estado, por lo que los códigos nuevos no requieren cambios en la interfaz.
+
 Una decisión funcional (incluidos denied/unsupported/selección) responde HTTP 200.
 Errores de transporte/autenticación: 401 invitado, 403 cuenta no autorizada,
 419 CSRF/sesión, 422 validación, 429 límite y 500 error inesperado. Todos tienen la

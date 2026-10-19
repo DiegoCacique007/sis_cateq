@@ -29,6 +29,6 @@ final class AgentGate
             return null;
         }
 
-        return EscalationAgent::response($decision);
+        return EscalationAgent::response($decision, $request->facts->context->role);
     }
 }
