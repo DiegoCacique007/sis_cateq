@@ -2,6 +2,7 @@
 
 namespace App\Models\Secretaria;
 
+use App\Models\Concerns\PreventsDeletionWithDependents;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Periodo extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, PreventsDeletionWithDependents, SoftDeletes;
 
     protected $table = 'periodos';
 
@@ -24,6 +25,17 @@ class Periodo extends Model
         'fecha_fin' => 'date',
         'estado' => 'integer',
     ];
+
+    /** Un periodo con grupos, inscripciones, asignaciones o evaluaciones vivas no se puede eliminar. */
+    protected function dependentRelations(): array
+    {
+        return [
+            'grupos' => ['grupo', 'grupos'],
+            'inscripciones' => ['inscripción', 'inscripciones'],
+            'asignacionesGrupo' => ['asignación de grupo', 'asignaciones de grupo'],
+            'evaluaciones' => ['evaluación', 'evaluaciones'],
+        ];
+    }
 
     public function inscripciones()
     {

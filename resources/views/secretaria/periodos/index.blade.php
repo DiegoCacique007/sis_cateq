@@ -238,7 +238,7 @@
                             action="{{ route('secretaria.periodos.destroy', $registro->id) }}"
                             method="POST"
                             class="d-inline js-delete-form"
-                            data-message="Esta acción eliminará el periodo seleccionado."
+                            data-message="Esta acción eliminará el periodo seleccionado. Si tiene datos asociados, no se eliminará."
                         >
                             @csrf
                             @method('DELETE')

@@ -98,6 +98,15 @@ class PeriodoController extends Controller
     public function destroy($id)
     {
         $periodo = Periodo::findOrFail($id);
+
+        // El modelo también lo impide; aquí se explica a Secretaría qué datos tiene y la alternativa.
+        if ($periodo->hasDependents()) {
+            return redirect()
+                ->route('secretaria.periodos.index')
+                ->with('error', 'No se puede eliminar el periodo '.Periodo::nombreLegible($periodo->fecha_inicio, $periodo->fecha_fin)
+                    .' porque tiene '.$periodo->dependentsSummary().'. Si ya no se usará, márcalo como inactivo.');
+        }
+
         $periodo->delete();
 
         return redirect()
