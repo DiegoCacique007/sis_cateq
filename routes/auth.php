@@ -55,7 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
     Route::get('cuenta/contrasena', [PasswordController::class, 'edit'])
-        ->middleware(['approved', \App\Http\Middleware\NoCacheHeaders::class])
+        ->middleware(['approved', \App\Http\Middleware\NoCacheHeaders::class, 'periodo.activo'])
         ->name('cuenta.password.edit');
 
     Route::put('password', [PasswordController::class, 'update'])

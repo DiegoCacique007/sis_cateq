@@ -484,7 +484,7 @@
             ...swalConfig,
             icon: "error",
             title: "Error de acceso",
-            text: "{{ $errors->first() }}",
+            text: @json($errors->first()),
             confirmButtonText: "Entendido"
         });
         @endif
@@ -495,7 +495,7 @@
             icon: "success",
             iconColor: "#0056b3",
             title: "Información",
-            text: "{{ session('status') }}",
+            text: @json(session('status')),
             confirmButtonText: "Continuar"
         });
         @endif

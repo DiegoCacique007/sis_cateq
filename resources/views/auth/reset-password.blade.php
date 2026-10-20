@@ -409,7 +409,7 @@
             ...swalConfig,
             icon: "error",
             title: "Error de validación",
-            text: "{{ $errors->first() }}",
+            text: @json($errors->first()),
             confirmButtonText: "Entendido"
         });
         @endif

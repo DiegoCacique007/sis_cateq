@@ -66,6 +66,16 @@ test('selección reenvía el mensaje original y solo assignment_id, con CSRF', a
     assert.equal(calls[1].options.credentials, 'same-origin');
 });
 
+test('al elegir una opción, la burbuja del usuario muestra la opción y no repite el mensaje', async () => {
+    const ui = setup(async () => ({ json: async () => ({ status: 'selection_required', message: 'Selecciona', data: { options: [{ id: 7, label: 'Grupo A' }] } }) }));
+    send(ui, 'mis alumnos');
+    await settle();
+    ui.log.children.at(-1).children[0].events.click();
+    await settle();
+    const userBubbles = ui.log.children.filter((bubble) => bubble.className.includes('is-user')).map((bubble) => bubble.textContent);
+    assert.deepEqual(userBubbles, ['mis alumnos', 'Grupo A']);
+});
+
 test('bloquea doble envío y recupera controles después de fallo de red', async () => {
     let calls = 0;
     let reject;

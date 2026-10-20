@@ -24,12 +24,13 @@ document.querySelectorAll('[data-chatbot]').forEach(root=>{
         return bubble;
     };
 
-    const send=async(message,assignmentId=null)=>{
+    // shown: lo que ve el usuario en su burbuja (al elegir una opción, la opción; el servidor recibe el mensaje original).
+    const send=async(message,assignmentId=null,shown=message)=>{
         if(busy)return;
         busy=true;
         root.querySelectorAll('form button,.cateq-chat-log button').forEach(b=>b.disabled=true);
         progress.hidden=false;
-        append(message,true);
+        append(shown,true);
 
         const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
 
@@ -65,7 +66,7 @@ document.querySelectorAll('[data-chatbot]').forEach(root=>{
                     const button=document.createElement('button');
                     button.type='button';
                     button.textContent=option.label;
-                    button.addEventListener('click',()=>send(message,option.id));
+                    button.addEventListener('click',()=>send(message,option.id,option.label));
                     bubble.append(button);
                 });
             }

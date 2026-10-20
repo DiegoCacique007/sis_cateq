@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -66,9 +67,8 @@ class RegisteredUserController extends Controller
 
         // 3) Validar rol solicitado
         if ($normalizedRequestedRole === null) {
-            return back()
-                ->withErrors(['requested_role' => 'Selecciona un tipo de acceso válido.'])
-                ->withInput();
+            // Error de validación (422 en JSON): una redirección haría que el formulario, enviado con fetch, mostrara éxito.
+            throw ValidationException::withMessages(['requested_role' => 'Selecciona un tipo de acceso válido.']);
         }
 
         // 4) Log opcional

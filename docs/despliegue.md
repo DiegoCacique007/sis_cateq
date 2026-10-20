@@ -282,8 +282,3 @@ nadie se sorprenda al comparar estructuras:
 - **Columnas de sacramentos.** `2026_05_01_000001_add_sacramentos_and_rbac_fields` ya no añade
   las columnas `bautizo_*` y `primera_comunion_*` a `alumnos`: la base original no las tiene y
   ningún código las usa.
-- **Pendiente: `inscripciones.estado`.** Los paneles de Párroco, Coordinador General y
-  Coordinador de Comunidades filtran inscripciones por una columna `estado` que la tabla
-  `inscripciones` no tiene. En MySQL o MariaDB esas consultas fallan con «Unknown column
-  'estado'». Está pendiente de corrección; mientras tanto, comprueba esos paneles después de
-  instalar o actualizar.

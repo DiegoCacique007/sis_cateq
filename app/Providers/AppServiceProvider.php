@@ -46,7 +46,8 @@ class AppServiceProvider extends ServiceProvider
 
                     return $request->expectsJson()
                         ? response()->json(['message' => $message, 'errors' => ['email' => [$message]]], 429, $headers)
-                        : redirect()->route('password.request')->withErrors(['email' => $message])->withInput($request->only('email'));
+                        : redirect()->route('password.request')->withErrors(['email' => $message])->withInput($request->only('email'))
+                            ->with('error_title', 'Demasiadas solicitudes');
                 });
         });
 

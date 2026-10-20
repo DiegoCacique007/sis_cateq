@@ -375,8 +375,8 @@
         Swal.fire({
             ...swalConfig,
             icon: "error",
-            title: "Error de validación",
-            text: "{{ $errors->first() }}",
+            title: @json(session('error_title', 'Error de validación')),
+            text: @json($errors->first()),
             confirmButtonText: "Entendido"
         });
         @endif
@@ -387,7 +387,7 @@
             icon: "success",
             iconColor: "#0056b3",
             title: "Solicitud recibida",
-            text: "{{ session('status') }}",
+            text: @json(session('status')),
             confirmButtonText: "Aceptar"
         });
         @endif
