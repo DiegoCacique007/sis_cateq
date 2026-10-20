@@ -30,7 +30,6 @@ abstract class CatequesisWebTestCase extends CatequesisTestCase
         }
         Schema::table('rubros', fn (Blueprint $t) => $t->decimal('valor', 8, 2)->default(10));
         Schema::table('evaluaciones', fn (Blueprint $t) => $t->decimal('calificacion', 8, 2)->default(5));
-        Schema::table('inscripciones', fn (Blueprint $t) => $t->integer('estado')->nullable()->default(1));
         Schema::table('alumnos', fn (Blueprint $t) => $t->date('fecha_nacimiento')->nullable());
         Schema::create('tutores', function (Blueprint $t) {
             $t->id();

@@ -29,7 +29,7 @@ class CoordGeneralController extends Controller
         $totalCatequistas = app(AccessibleCatequistas::class)->for($context)->count();
         $totalEvaluaciones = app(AccessibleEvaluaciones::class)->for($context)->count();
         $totalGruposAsignados = app(AccessibleAsignaciones::class)->for($context)->count();
-        $totalInscripciones = app(AccessibleInscripciones::class)->forIndex($context)->where('estado', 1)->count();
+        $totalInscripciones = app(AccessibleInscripciones::class)->forIndex($context)->count();
         $totalNiveles = app(AccessibleNiveles::class)->for($context)->count();
         $totalTutores = app(AccessibleTutores::class)->for($context)->count();
 
@@ -134,9 +134,6 @@ class CoordGeneralController extends Controller
             if ($grupoId) {
                 $inscripciones = app(AccessibleInscripciones::class)->for($context)->with(['alumno', 'grupo'])
                     ->where('grupo_id', $grupoId)
-                    ->where(function ($q) {
-                        $q->where('estado', 1)->orWhereNull('estado');
-                    })
                     ->whereNull('deleted_at')
                     ->get();
 

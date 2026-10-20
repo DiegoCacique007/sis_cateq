@@ -27,7 +27,7 @@ class CoordComunidadController extends Controller
         $totalGrupos = app(AccessibleAsignaciones::class)->for($context)->count();
         $totalCatequistas = app(AccessibleCatequistas::class)->for($context)->count();
         $totalEvaluaciones = app(AccessibleEvaluaciones::class)->for($context)->count();
-        $totalInscripciones = app(AccessibleInscripciones::class)->for($context)->where('estado', 1)->count();
+        $totalInscripciones = app(AccessibleInscripciones::class)->for($context)->count();
 
         return view('CoordComunidad.dashboard', compact('totalComunidades', 'totalAlumnos', 'totalGrupos', 'totalCatequistas', 'totalEvaluaciones', 'totalInscripciones'));
     }
@@ -138,9 +138,6 @@ class CoordComunidadController extends Controller
             if ($grupoId) {
                 $inscripciones = app(AccessibleInscripciones::class)->for($context)->with(['alumno', 'grupo'])
                     ->where('grupo_id', $grupoId)
-                    ->where(function ($q) {
-                        $q->where('estado', 1)->orWhereNull('estado');
-                    })
                     ->whereNull('deleted_at')
                     ->get();
 

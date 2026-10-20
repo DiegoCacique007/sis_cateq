@@ -71,18 +71,6 @@
             gap: 0.35rem;
         }
 
-        .inscripcion-card .status-badge-alta {
-            background-color: #ecfdf5;
-            color: #059669;
-            border: 1px solid #10b981;
-        }
-
-        .inscripcion-card .status-badge-baja {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #ef4444;
-        }
-
         .inscripcion-card .info-badge svg {
             width: 16px;
             height: 16px;
@@ -226,18 +214,6 @@
                             <i class="bi bi-collection"></i>
                             {{ $registro->grupo_nombre ?? $registro->grupo->nombre ?? 'Sin grupo' }}
                         </span>
-
-                        @if((int) $registro->estado === 1)
-                            <span class="info-badge status-badge-alta">
-                                <i class="bi bi-check-circle"></i>
-                                Alta
-                            </span>
-                        @else
-                            <span class="info-badge status-badge-baja">
-                                <i class="bi bi-x-circle"></i>
-                                Baja
-                            </span>
-                        @endif
                     </div>
                 </div>
             @empty
@@ -334,14 +310,6 @@
                                             {{ $grupo->text ?? $grupo->nombre }}
                                         </option>
                                     @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Estado de inscripción</label>
-                                <select name="estado" class="form-select" required>
-                                    <option value="1" {{ old('estado', $registro->estado) == 1 ? 'selected' : '' }}>Alta</option>
-                                    <option value="0" {{ old('estado', $registro->estado) == 0 ? 'selected' : '' }}>Baja</option>
                                 </select>
                             </div>
                         </div>
