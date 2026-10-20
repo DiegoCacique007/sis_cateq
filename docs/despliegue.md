@@ -72,6 +72,7 @@ el `.env` del servidor.
    | `QUEUE_CONNECTION` | `database` | No hay trabajos en cola; no hace falta `queue:work` |
    | `MAIL_MAILER` y `MAIL_*` | `smtp` y los datos del proveedor, con TLS | Con `log`, los enlaces de recuperación no llegan a nadie |
    | `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | Dirección real del dominio / `"SIS CATEQ"` | Evita que los correos acaben en spam |
+   | `CHATBOT_CLASSIFIER_MODE` | `off` (o sin definir) | El chatbot funciona solo con reglas; ver el paso 14 |
 
 3. Genera la clave de la aplicación **una sola vez**:
 
@@ -282,3 +283,61 @@ nadie se sorprenda al comparar estructuras:
 - **Columnas de sacramentos.** `2026_05_01_000001_add_sacramentos_and_rbac_fields` ya no añade
   las columnas `bautizo_*` y `primera_comunion_*` a `alumnos`: la base original no las tiene y
   ningún código las usa.
+
+## 14. Clasificador de intenciones del chatbot (opcional)
+
+El chatbot decide qué se le pregunta con **reglas**. Opcionalmente, un modelo de lenguaje puede
+clasificar los mismos mensajes **en modo sombra**: la respuesta al usuario sigue saliendo de las
+reglas y el modelo solo se compara, para medir si ayudaría.
+
+**Por defecto está desactivado** (`CHATBOT_CLASSIFIER_MODE=off`): no se contacta a ningún proveedor
+y el servidor no necesita GPU ni ningún programa adicional. Así debe quedar en producción mientras no
+se decida otra cosa.
+
+### Activarlo (modo sombra, con Ollama en el mismo equipo)
+
+1. Instala Ollama y descarga el modelo en el equipo (no lo hace la aplicación):
+   `hf.co/Mungert/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M` (Qwen3-4B-Instruct-2507, licencia Apache 2.0).
+   Con una GPU de 4 GB el modelo cabe entero.
+2. En `.env`:
+
+   ```
+   CHATBOT_CLASSIFIER_MODE=shadow
+   CHATBOT_CLASSIFIER_DRIVER=ollama
+   CHATBOT_OLLAMA_URL=http://localhost:11434
+   CHATBOT_OLLAMA_MODEL=hf.co/Mungert/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M
+   CHATBOT_CLASSIFIER_TIMEOUT=8
+   CHATBOT_OLLAMA_KEEP_ALIVE=10m
+   ```
+
+3. `php artisan config:clear` (o `php artisan optimize` en producción).
+
+Para desactivarlo: `CHATBOT_CLASSIFIER_MODE=off` y otra vez `config:clear` u `optimize`.
+
+**Cómo funciona:**
+- El adaptador siempre pide la respuesta sin razonamiento (`"think": false`). Si llega vacía, en un
+  formato no válido, fuera de la lista de intenciones o tras el tiempo máximo, se descarta.
+- El modelo nunca puede elegir una intención de modificar datos.
+- Los mensajes que bloquea una guarda de las reglas, los vacíos y los inválidos no se le envían.
+- Ollama descarga el modelo de la memoria tras unos minutos sin uso: la primera consulta después
+  tarda más. `CHATBOT_OLLAMA_KEEP_ALIVE` y `CHATBOT_CLASSIFIER_TIMEOUT` lo acotan.
+
+**Privacidad:**
+- Con Ollama en el mismo equipo (`localhost`), el texto de los mensajes no sale del servidor.
+- **Un proveedor remoto** (otra máquina, un servicio en la nube) **recibiría el texto que escriben los
+  usuarios**, que puede incluir nombres de alumnos. Configurarlo exige una decisión explícita de la
+  parroquia, revisar las condiciones del proveedor y avisar a los usuarios.
+- En ningún modo se registran el mensaje, el prompt ni la respuesta del modelo: solo códigos.
+
+**Apache con PHP como módulo (`mod_php`, p. ej. XAMPP):**
+- La clasificación en sombra se ejecuta después de enviar la respuesta. Con `mod_php` la conexión sigue
+  abierta mientras dura, y sin más el navegador esperaría también el tiempo del modelo. Con PHP-FPM no ocurre.
+- Para evitarlo, cuando hay una clasificación pendiente la respuesta del chatbot lleva `Content-Length`
+  (en bytes). Así el navegador la da por completa al instante, sin esperar al modelo.
+- Esa respuesta pide a Apache que no la comprima (`no-gzip`), porque `mod_deflate` quitaría la longitud.
+  En XAMPP, `mod_deflate` viene desactivado.
+- Si PHP comprime la salida (`zlib.output_compression=On` en `php.ini`), la longitud no coincidiría con
+  lo enviado y no se añade. En ese caso el usuario volvería a esperar al modelo: deja
+  `zlib.output_compression=Off`, como viene en XAMPP.
+- **Comprobación recomendada** tras activar el modo sombra: en las herramientas del navegador (pestaña
+  Red), la petición `chatbot/message` debe terminar en el tiempo habitual y no en el del modelo.

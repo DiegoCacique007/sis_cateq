@@ -12,7 +12,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(\App\Services\Chatbot\Contracts\IntentResolver::class, \App\Services\Chatbot\Intent\RuleBasedIntentResolver::class);
+        // Reglas primero; el modelo solo interviene en modo sombra (config/chatbot.php, por defecto off).
+        $this->app->scoped(\App\Services\Chatbot\Intent\ShadowClassificationTracker::class);
+        $this->app->bind(\App\Services\Chatbot\Contracts\IntentResolver::class, fn ($app) => new \App\Services\Chatbot\Intent\HybridIntentResolver(
+            $app->make(\App\Services\Chatbot\Intent\RuleBasedIntentResolver::class),
+            (string) config('chatbot.classifier.mode', 'off'),
+            $app->make(\App\Services\Chatbot\Intent\ShadowClassificationTracker::class),
+        ));
+        $this->app->bind(\App\Services\Chatbot\Contracts\IntentClassifier::class, fn () => match (config('chatbot.classifier.driver')) {
+            'ollama' => new \App\Services\Chatbot\Intent\OllamaIntentClassifier(
+                (string) config('chatbot.classifier.ollama.url'),
+                (string) config('chatbot.classifier.ollama.model'),
+                (int) config('chatbot.classifier.timeout', 8),
+                (string) config('chatbot.classifier.ollama.keep_alive', '10m'),
+            ),
+            default => new \App\Services\Chatbot\Intent\NullIntentClassifier,
+        });
     }
 
     /**
