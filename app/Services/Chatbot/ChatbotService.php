@@ -47,7 +47,7 @@ final class ChatbotService
         // Un único punto de registro para todas las salidas; la bitácora nunca recibe el mensaje en bruto.
         $this->events->record($context?->role, $resolution, $response,
             $assignmentId !== null || $inscriptionId !== null || $studentId !== null || $evaluationId !== null,
-            $resolution?->code === 'NO_MATCH' ? $this->shaper->shape($message) : null);
+            ($resolution?->classifier?->ruleCode ?? $resolution?->code) === 'NO_MATCH' ? $this->shaper->shape($message) : null);
 
         return $response;
     }

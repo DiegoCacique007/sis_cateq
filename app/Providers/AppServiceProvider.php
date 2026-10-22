@@ -18,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
             $app->make(\App\Services\Chatbot\Intent\RuleBasedIntentResolver::class),
             (string) config('chatbot.classifier.mode', 'off'),
             $app->make(\App\Services\Chatbot\Intent\ShadowClassificationTracker::class),
+            classifier: $app->make(\App\Services\Chatbot\Contracts\IntentClassifier::class),
         ));
         $this->app->bind(\App\Services\Chatbot\Contracts\IntentClassifier::class, fn () => match (config('chatbot.classifier.driver')) {
             'ollama' => new \App\Services\Chatbot\Intent\OllamaIntentClassifier(

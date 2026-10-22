@@ -286,41 +286,96 @@ nadie se sorprenda al comparar estructuras:
 
 ## 14. Clasificador de intenciones del chatbot (opcional)
 
-El chatbot decide qué se le pregunta con **reglas**. Opcionalmente, un modelo de lenguaje puede
-clasificar los mismos mensajes **en modo sombra**: la respuesta al usuario sigue saliendo de las
-reglas y el modelo solo se compara, para medir si ayudaría.
+El chatbot decide qué se le pregunta con **reglas**. Opcionalmente, un modelo de lenguaje puede ayudar
+cuando las reglas no entienden el mensaje. Hay tres modos (`CHATBOT_CLASSIFIER_MODE`):
 
-**Por defecto está desactivado** (`CHATBOT_CLASSIFIER_MODE=off`): no se contacta a ningún proveedor
-y el servidor no necesita GPU ni ningún programa adicional. Así debe quedar en producción mientras no
-se decida otra cosa.
+| Modo | Qué hace | ¿El usuario espera al modelo? |
+|---|---|---|
+| `off` (por defecto) | Solo reglas; no se contacta a ningún proveedor | No |
+| `shadow` | La respuesta sale de las reglas; el modelo clasifica **después** de responder y solo se registra la comparación | No |
+| `assist` | Si las reglas no reconocen el mensaje (`NO_MATCH`) o dudan entre varias intenciones (`AMBIGUOUS_INTENT`), se consulta al modelo **en la misma petición** y su elección se usa | **Sí**, solo en esos mensajes |
 
-### Activarlo (modo sombra, con Ollama en el mismo equipo)
+**Por defecto está desactivado** (`off`): un servidor sin configurar no depende de Ollama, ni de una GPU,
+ni de ningún programa adicional.
+
+### Preparación (una vez)
 
 1. Instala Ollama y descarga el modelo en el equipo (no lo hace la aplicación):
    `hf.co/Mungert/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M` (Qwen3-4B-Instruct-2507, licencia Apache 2.0).
    Con una GPU de 4 GB el modelo cabe entero.
-2. En `.env`:
+2. Aplica la migración de las columnas del clasificador en `chatbot_events`, con la copia de
+   seguridad previa:
 
    ```
-   CHATBOT_CLASSIFIER_MODE=shadow
-   CHATBOT_CLASSIFIER_DRIVER=ollama
-   CHATBOT_OLLAMA_URL=http://localhost:11434
-   CHATBOT_OLLAMA_MODEL=hf.co/Mungert/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M
-   CHATBOT_CLASSIFIER_TIMEOUT=8
-   CHATBOT_OLLAMA_KEEP_ALIVE=10m
+   php artisan migrate:status
+   php artisan migrate --path=database/migrations/2026_10_21_000001_add_classifier_columns_to_chatbot_events_table.php
    ```
 
-3. `php artisan config:clear` (o `php artisan optimize` en producción).
+   Sin ella, con `shadow` o `assist` los eventos del chatbot no se guardan: la respuesta al usuario no
+   cambia y queda un aviso `chatbot.event_failed` en el log.
+
+### Activar el modo assist (equipo dedicado con Ollama)
+
+En `.env`:
+
+```
+CHATBOT_CLASSIFIER_MODE=assist
+CHATBOT_CLASSIFIER_DRIVER=ollama
+CHATBOT_OLLAMA_URL=http://localhost:11434
+CHATBOT_OLLAMA_MODEL=hf.co/Mungert/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M
+CHATBOT_CLASSIFIER_TIMEOUT=5
+CHATBOT_OLLAMA_KEEP_ALIVE=1h
+```
+
+Después, `php artisan config:clear` (o `php artisan optimize` en producción). Para el modo sombra, lo
+mismo con `CHATBOT_CLASSIFIER_MODE=shadow` (ahí el tiempo máximo puede ser 8, porque el usuario no espera).
 
 Para desactivarlo: `CHATBOT_CLASSIFIER_MODE=off` y otra vez `config:clear` u `optimize`.
 
-**Cómo funciona:**
+- **`CHATBOT_OLLAMA_KEEP_ALIVE=1h`:** en un equipo dedicado, mantiene el modelo cargado una hora desde
+  la última consulta, para que no se descargue entre consultas y la primera respuesta no tarde de más.
+  Ollama también acepta `-1` (no descargarlo nunca), a costa de ocupar la memoria de la GPU todo el tiempo.
+- **`CHATBOT_CLASSIFIER_TIMEOUT=5`:** en assist el usuario espera al modelo. Con el modelo ya cargado, la
+  clasificación debería tardar del orden de 1 a 2 segundos: el prompt tiene ~1.240 tokens y la
+  respuesta es muy corta. Es una estimación; mídelo con el comando de evaluación. Si el modelo estaba
+  descargado y tarda más de 5 segundos, el usuario recibe la respuesta de las reglas, como sin modelo.
+
+**Cómo funciona el modo assist:**
+- El modelo **solo** se consulta con `NO_MATCH` o `AMBIGUOUS_INTENT`; nunca si las reglas ya entendieron
+  el mensaje, si lo bloqueó una guarda, ni con mensajes vacíos o inválidos.
+- Con `AMBIGUOUS_INTENT`, solo puede elegir entre las intenciones candidatas de las reglas.
+- La intención elegida pasa por el filtro de escritura (una consulta para un mensaje que pide cambiar o
+  borrar datos se descarta) y después por el **motor de reglas y los agentes, que revalidan los permisos
+  como siempre**: el modelo nunca da acceso a nada que el rol no tenga.
+- Si el modelo falla, tarda más del tiempo máximo o responde algo inválido, el usuario recibe la
+  respuesta de las reglas.
+- En `chatbot_events`, `classifier_outcome = USED` indica que la respuesta vino del modelo, y
+  `FALLBACK_<motivo>` que se volvió a las reglas. Se guardan además la intención del modelo, la latencia
+  (redondeada a 100 ms) y la versión del prompt. Nunca el texto.
+
+**Cómo funciona en general:**
 - El adaptador siempre pide la respuesta sin razonamiento (`"think": false`). Si llega vacía, en un
   formato no válido, fuera de la lista de intenciones o tras el tiempo máximo, se descarta.
 - El modelo nunca puede elegir una intención de modificar datos.
 - Los mensajes que bloquea una guarda de las reglas, los vacíos y los inválidos no se le envían.
-- Ollama descarga el modelo de la memoria tras unos minutos sin uso: la primera consulta después
-  tarda más. `CHATBOT_OLLAMA_KEEP_ALIVE` y `CHATBOT_CLASSIFIER_TIMEOUT` lo acotan.
+
+### Medir y mejorar
+
+- **`php artisan chatbot:report`** resume, además de lo habitual:
+  - cuántas consultas resolvió el modelo en assist y cuántas volvieron a las reglas;
+  - acuerdos, desacuerdos y rescates en sombra;
+  - la latencia (media, p95 y máxima);
+  - las formas de mensaje (enmascaradas) de los desacuerdos, los rescates y las respuestas del modelo.
+- **`php artisan chatbot:evaluate-classifier`** pasa por el modelo real las frases de
+  `tests/Fixtures/chatbot_frases.php` (escritas para ello, con formas coloquiales y casos dudosos). Muestra:
+  - el porcentaje de aciertos total y por intención, del modelo solo y del modo assist;
+  - los fallos del proveedor y la latencia;
+  - la tabla de errores.
+
+  Necesita Ollama encendido y `CHATBOT_CLASSIFIER_DRIVER=ollama`; no forma parte de la suite de pruebas.
+  Opciones: `--intent=VIEW_EVALUATIONS` y `--file=ruta`.
+- **Al cambiar las descripciones** del prompt (`app/Services/Chatbot/Intent/IntentDescriptions.php`), sube
+  `VERSION` y vuelve a evaluar.
 
 **Privacidad:**
 - Con Ollama en el mismo equipo (`localhost`), el texto de los mensajes no sale del servidor.
@@ -329,7 +384,8 @@ Para desactivarlo: `CHATBOT_CLASSIFIER_MODE=off` y otra vez `config:clear` u `op
   parroquia, revisar las condiciones del proveedor y avisar a los usuarios.
 - En ningún modo se registran el mensaje, el prompt ni la respuesta del modelo: solo códigos.
 
-**Apache con PHP como módulo (`mod_php`, p. ej. XAMPP):**
+**Apache con PHP como módulo (`mod_php`, p. ej. XAMPP), solo en modo sombra** (en assist la espera es
+intencionada: la respuesta depende del modelo):
 - La clasificación en sombra se ejecuta después de enviar la respuesta. Con `mod_php` la conexión sigue
   abierta mientras dura, y sin más el navegador esperaría también el tiempo del modelo. Con PHP-FPM no ocurre.
 - Para evitarlo, cuando hay una clasificación pendiente la respuesta del chatbot lleva `Content-Length`

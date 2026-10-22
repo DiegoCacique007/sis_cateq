@@ -23,6 +23,7 @@ class ChatbotEvent extends Model
 
     protected $fillable = [
         'occurred_on', 'role', 'intent', 'resolution', 'guard', 'status', 'code', 'with_selection', 'message_shape',
+        'classifier_intent', 'classifier_outcome', 'classifier_latency_ms', 'prompt_version',
     ];
 
     protected $casts = [
