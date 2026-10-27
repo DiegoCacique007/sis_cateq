@@ -3,7 +3,7 @@
 
     <div class="cateq-chat" data-chatbot data-endpoint="{{ route('chatbot.message', [], false) }}" data-csrf="{{ csrf_token() }}">
         <button type="button" class="cateq-chat-launch" aria-expanded="false" aria-controls="cateq-chat-panel" aria-label="Abrir asistente" title="Asistente SIS_CATEQ">
-            <img src="{{ asset('images/chatbot/robot.png') }}" alt="Asistente SIS_CATEQ" class="cateq-chat-logo">
+            <img src="{{ asset('logos/logo_asuncion_de_maria.png') }}" alt="Asistente SIS_CATEQ" class="cateq-chat-logo">
         </button>
 
         <section id="cateq-chat-panel" class="cateq-chat-panel" aria-label="Asistente de SIS_CATEQ" hidden>
