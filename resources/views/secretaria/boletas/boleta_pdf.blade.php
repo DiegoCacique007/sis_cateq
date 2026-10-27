@@ -1,4 +1,22 @@
-<!DOCTYPE html>
+@php
+    $nivelTexto = strtolower(trim((string) ($asignacion?->nivel?->nivel ?? '')));
+    $nivelNumero = null;
+    if (preg_match('/(?<!\d)([1-6])(?!\d)/', $nivelTexto, $coincidencia)) {
+        $nivelNumero = (int) $coincidencia[1];
+    } else {
+        foreach (['primero' => 1, 'primera' => 1, 'primer' => 1, 'segundo' => 2, 'segunda' => 2, 'tercero' => 3, 'tercera' => 3, 'tercer' => 3, 'cuarto' => 4, 'cuarta' => 4, 'quinto' => 5, 'quinta' => 5, 'sexto' => 6, 'sexta' => 6] as $nombre => $numero) {
+            if (str_contains($nivelTexto, $nombre)) {
+                $nivelNumero = $numero;
+                break;
+            }
+        }
+    }
+    if ($nivelNumero === null && in_array((int) ($asignacion?->nivel_id ?? 0), [1, 2, 3, 4, 5, 6], true)) {
+        $nivelNumero = (int) $asignacion->nivel_id;
+    }
+    $esNivelVerde = in_array($nivelNumero, [1, 2, 3], true);
+@endphp
+    <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
@@ -379,6 +397,18 @@
             letter-spacing: 0.8px;
         }
 
+        /* Niveles 1 a 3: verde #64C27B; niveles 4 a 6: colores originales. */
+        body.boleta-verde-claro .header { border-bottom-color: #64C27B; }
+        body.boleta-verde-claro .datos-header,
+        body.boleta-verde-claro .bg-orange,
+        body.boleta-verde-claro .cal-table tbody td.unidad-cell,
+        body.boleta-verde-claro .asistencias-cell { background-color: #64C27B !important; }
+        body.boleta-verde-claro .bg-light-orange { background-color: #8FD7A0 !important; }
+        body.boleta-verde-claro .bg-dark-beige { background-color: #CDEDD6 !important; }
+        body.boleta-verde-claro .bg-light-beige { background-color: #ECF9F0 !important; }
+        body.boleta-verde-claro .obs-box { border-color: #64C27B; }
+        body.boleta-verde-claro .no-print button { background-color: #64C27B !important; }
+
         @media print {
             body {
                 -webkit-print-color-adjust: exact;
@@ -396,7 +426,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{{ $esNivelVerde ? 'boleta-verde-claro' : '' }}">
 @php
     $logoArquidiocesisPath = public_path('logos/logo_arquidiocesis.png');
     $logoAsuncionPath = public_path('logos/logo_asuncion_de_maria.png');
@@ -608,3 +638,4 @@
 </div>
 </body>
 </html>
+

@@ -143,9 +143,6 @@
             color: var(--blue-dark, #1e3a8a); font-size: .8rem; font-weight: 600;
         }
 
-        .small-formal-toast { border-radius: 14px !important; box-shadow: 0 12px 30px rgba(15,23,42,.16) !important; border: 1px solid rgba(30,58,138,.10) !important; }
-        .small-formal-confirm { border-radius: 18px !important; box-shadow: 0 18px 46px rgba(15,23,42,.20) !important; }
-
         @media (max-width: 992px) {
             .sidebar { width: 94px; padding: 18px 10px; }
             .brand-sub, .brand-title, .nav-parroquia .nav-link span { display: none; }
@@ -223,19 +220,7 @@
             @endauth
         </nav>
 
-        @auth
-            <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.25);">
-                <a class="btn btn-outline-parroquia btn-sm w-100 mb-2" href="{{ route('cuenta.password.edit') }}">
-                    <i class="bi bi-key me-1"></i> Cambiar contraseña
-                </a>
-                <form id="logout-form" method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="btn btn-outline-parroquia btn-sm w-100" type="button" onclick="window.AppAlert.confirmLogout().then(r => { if(r.isConfirmed) document.getElementById('logout-form').submit(); })">
-                        <i class="bi bi-box-arrow-right me-1"></i> Salir
-                    </button>
-                </form>
-            </div>
-        @endauth
+
     </aside>
 
     <main class="main">
@@ -252,10 +237,7 @@
                         Periodo actual: {{ session('periodo_activo_nombre', 'Seleccionar') }}
                     </button>
 
-                    <span class="chip">
-                        <i class="bi bi-person-circle me-1"></i>
-                        {{ auth()->user()->name }} ({{ auth()->user()->role }})
-                    </span>
+                    <x-user-menu />
 
                     @yield('header_actions')
                 </div>
@@ -303,58 +285,7 @@
 @endauth
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-    window.AppAlert = window.AppAlert || {
-        success(message = 'Operación realizada correctamente.') {
-            if (window.Swal) { return Swal.fire({ position: 'center', icon: 'success', title: 'Correcto', text: message, timer: 2600, timerProgressBar: true, showConfirmButton: false, width: '360px', customClass: { popup: 'small-formal-confirm' } }); }
-            alert(message); return Promise.resolve();
-        },
-        error(message = 'Ocurrió un error inesperado.', title = 'Error') {
-            if (window.Swal) { return Swal.fire({ position: 'center', icon: 'error', title: title, text: message, timer: 3400, timerProgressBar: true, showConfirmButton: false, width: '360px', customClass: { popup: 'small-formal-confirm' } }); }
-            alert(title + ': ' + message); return Promise.resolve();
-        },
-        validation(errors) {
-            // Los mensajes pueden contener datos enviados por el usuario: se insertan escapados.
-            const escapeHtml = function(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); };
-            let html = '<div style="text-align:left;font-size:12.5px;line-height:1.35;">';
-            Object.values(errors).forEach(function(items) { items.forEach(function(e) { html += '<div style="margin-bottom:4px;">• ' + escapeHtml(e) + '</div>'; }); });
-            html += '</div>';
-            if (window.Swal) { return Swal.fire({ position: 'center', icon: 'warning', title: 'Validación requerida', html: html, timer: 4300, timerProgressBar: true, showConfirmButton: false, width: '360px', customClass: { popup: 'small-formal-confirm' } }); }
-            alert('Verifica la información ingresada.'); return Promise.resolve();
-        },
-        confirmLogout() {
-            if (window.Swal) {
-                return Swal.fire({
-                    icon: 'warning',
-                    title: '¿Cerrar sesión?',
-                    text: '¿Está seguro que desea salir del sistema?',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, salir',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#dc3545',
-                    cancelButtonColor: '#6c757d',
-                    reverseButtons: true,
-                    width: '360px',
-                    customClass: { popup: 'small-formal-confirm' }
-                });
-            }
-            return Promise.resolve({ isConfirmed: confirm('¿Está seguro que desea salir del sistema?') });
-        }
-    };
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const successMessage = @json(session('success'));
-        const statusMessage = @json(session('status'));
-        const errorMessage = @json(session('error'));
-        const validationErrors = @json($errors->messages());
-        if (successMessage) window.AppAlert.success(successMessage);
-        if (statusMessage) window.AppAlert.success(statusMessage);
-        if (errorMessage) window.AppAlert.error(errorMessage);
-        if (validationErrors && Object.keys(validationErrors).length > 0) window.AppAlert.validation(validationErrors);
-    });
-</script>
+<x-app-alerts />
 
 @stack('modals')
 @stack('scripts')
