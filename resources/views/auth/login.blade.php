@@ -13,7 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     {{-- SweetAlert2 CSS --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.min.css">
 
     <style>
         :root{
@@ -104,15 +103,20 @@
         }
 
         .logo-container{
-            width: 70px; height: 70px;
+            width: 120px; height: 120px;
             display: flex; align-items: center; justify-content: center;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
             margin-bottom: 20px;
-            font-size: 2rem;
-            backdrop-filter: blur(5px);
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            backdrop-filter: none;
             z-index: 2;
+        }
+        .logo-container img{
+            width: 100%; height: 100%;
+            object-fit: contain;
+            display: block;
         }
 
         .system-name{
@@ -321,7 +325,7 @@
             .card-horizontal{ flex-direction: column; max-height: none; width: 100%; }
             .brand-panel{ padding: 30px 20px; flex: none; }
             .system-name { font-size: 1.3rem; }
-            .logo-container { width: 50px; height: 50px; font-size: 1.5rem; margin-bottom: 15px; }
+            .logo-container { width: 90px; height: 90px; margin-bottom: 15px; }
             .form-panel { padding: 40px 20px 30px; }
             .btn-back { top: 15px; left: 20px; }
             .form-title { margin-top: 10px; }
@@ -335,7 +339,7 @@
 
         <div class="brand-panel">
             <div class="logo-container">
-                <i class="bi bi-person-badge-fill"></i>
+                <img src="{{ asset('logos/logo_asuncion_de_maria.png') }}" alt="Logo de la Parroquia La Asunción de María">
             </div>
             <h1 class="system-name">Parroquia La Asunción de María</h1>
             <p class="system-desc">Sistema Integral de Gestión Parroquial. Ingrese sus credenciales para acceder al portal.</p>
@@ -421,7 +425,7 @@
 </div>
 
 {{-- SweetAlert2 JS --}}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.all.min.js"></script>
+@vite(['resources/js/alerts.js'])
 
 <script>
     // 1. Efecto 3D sutil para escritorio

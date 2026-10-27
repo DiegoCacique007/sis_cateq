@@ -38,12 +38,61 @@ class CambiarContrasenaTest extends CatequesisWebTestCase
     }
 
     #[DataProvider('roles')]
-    public function test_each_layout_links_to_change_password(string $role, string $dashboard): void
+    public function test_each_layout_has_profile_menu_outside_sidebar(string $role, string $dashboard): void
     {
-        $this->actingAs($this->user($role))->get(self::PAGE)
+        $response = $this->actingAs($this->user($role))->get(self::PAGE)
             ->assertOk()
             ->assertSee('href="'.url(self::PAGE).'"', false)
+            ->assertSee('Mi perfil')
+            ->assertSee('Cerrar sesión')
+            ->assertSee('data-bs-toggle="dropdown"', false)
             ->assertSee('Cambiar contraseña');
+        preg_match('/<aside\b[^>]*>(.*?)<\/aside>/s', $response->getContent(), $sidebar);
+        $this->assertNotEmpty($sidebar);
+        $this->assertStringNotContainsString(url(self::PAGE), $sidebar[1]);
+        $this->assertStringNotContainsString(route('logout'), $sidebar[1]);
+        $this->assertSame(1, substr_count($response->getContent(), 'id="account-logout-form"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'action="'.route('password.update').'"'));
+    }
+
+    public function test_profile_only_displays_authenticated_user_and_escapes_personal_data(): void
+    {
+        $other = User::factory()->create(['name' => 'Otra persona privada', 'email' => 'privado@example.com']);
+        $user = $this->user('coordinador_comunidades');
+        $user->update(['name' => '<script>alert(1)</script>']);
+        $this->actingAs($user)->get(self::PAGE.'?user='.$other->id)
+            ->assertOk()->assertSee($user->email)->assertSee($user->name)
+            ->assertDontSee($user->name, false)->assertDontSee($other->email)
+            ->assertSee($user->comunidad->comunidad)->assertSee('Aprobada')
+            ->assertDontSee('name="role"', false)->assertDontSee('name="status"', false)
+            ->assertDontSee($user->password, false)->assertDontSee($user->remember_token, false);
+    }
+
+    public function test_password_submission_cannot_change_identity_or_other_accounts(): void
+    {
+        $user = $this->user();
+        $other = $this->user();
+        $originalEmail = $user->email;
+        $this->actingAs($user)->put('/password', $this->payload([
+            'user_id' => $other->id, 'id' => $other->id, 'name' => 'Manipulado',
+            'email' => 'manipulado@example.com', 'role' => 'secretaria', 'status' => 'bloqueado',
+        ]))->assertSessionHasNoErrors()->assertRedirect(self::PAGE);
+        $this->assertSame($originalEmail, $user->fresh()->email);
+        $this->assertSame('catequista', $user->fresh()->role);
+        $this->assertSame('aprobado', $user->fresh()->status);
+        $this->assertTrue(Hash::check('password', $other->fresh()->password));
+    }
+
+    public function test_profile_requires_an_approved_account_and_logout_remains_post_only(): void
+    {
+        $this->get(self::PAGE)->assertRedirect(route('login'));
+        foreach (['pendiente', 'bloqueado'] as $status) {
+            $user = User::factory()->create(['role' => 'catequista', 'status' => $status]);
+            $this->actingAs($user)->get(self::PAGE)->assertForbidden();
+        }
+        $this->actingAs($this->user())->get('/logout')->assertStatus(405);
+        $this->post('/logout')->assertRedirect(route('login'));
+        $this->assertGuest();
     }
 
     public function test_password_is_changed_and_remember_token_rotated(): void

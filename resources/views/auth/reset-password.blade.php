@@ -13,7 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     {{-- SweetAlert2 CSS --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.min.css">
 
     <style>
         :root{
@@ -350,7 +349,7 @@
 </div>
 
 {{-- SweetAlert2 JS --}}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.6/dist/sweetalert2.all.min.js"></script>
+@vite(['resources/js/alerts.js'])
 
 <script>
     const stage = document.getElementById('stage');

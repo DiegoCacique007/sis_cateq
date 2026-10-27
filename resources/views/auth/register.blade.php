@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     {{-- SweetAlert2 --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @vite(['resources/js/alerts.js'])
 
     {{-- Google Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -118,18 +118,24 @@
         }
 
         .logo-container{
-            width: 70px;
-            height: 70px;
+            width: 120px;
+            height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
             margin-bottom: 20px;
-            font-size: 2rem;
-            backdrop-filter: blur(5px);
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            backdrop-filter: none;
             z-index: 2;
+        }
+        .logo-container img{
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .system-name{
@@ -349,9 +355,8 @@
             }
 
             .logo-container {
-                width: 50px;
-                height: 50px;
-                font-size: 1.5rem;
+                width: 90px;
+                height: 90px;
                 margin-bottom: 15px;
             }
 
@@ -377,7 +382,7 @@
 
         <div class="brand-panel">
             <div class="logo-container">
-                <i class="bi bi-shield-lock-fill"></i>
+                <img src="{{ asset('logos/logo_asuncion_de_maria.png') }}" alt="Logo de la Parroquia La Asunción de María">
             </div>
             <h1 class="system-name">Parroquia La Asunción de María</h1>
             <p class="system-desc">
@@ -555,20 +560,7 @@
         };
 
         function showValidation(errors) {
-            // Mostrar solo el primer error, como en el login
-            let firstError = 'Verifica la información ingresada.';
-            for (let field in errors) {
-                firstError = errors[field][0];
-                break;
-            }
-
-            return Swal.fire({
-                ...swalConfig,
-                icon: 'error',
-                title: 'Error de validación',
-                text: firstError,
-                confirmButtonText: 'Entendido'
-            });
+            return window.AppAlert.validation(errors);
         }
 
         function showSuccess(message) {
