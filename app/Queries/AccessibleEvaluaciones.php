@@ -12,6 +12,18 @@ final class AccessibleEvaluaciones
 {
     public function __construct(private readonly CatequesisAccess $access) {}
 
+    public function forBoleta(AccessContext $context, int $inscripcionId, int $asignacionId): Builder
+    {
+        $query = Evaluacion::query()->where('inscripcion_id', $inscripcionId)->whereHas('rubro')
+            ->where(fn (Builder $q) => $q->where('periodo_id', $context->activePeriodId)->orWhereNull('periodo_id'));
+        if (! $this->access->canViewBoleta($context, $inscripcionId, $asignacionId)->isAllowed()) {
+            return $query->whereRaw('1 = 0');
+        }
+        $assignment = (new AccessibleAsignaciones($this->access))->for($context)->findOrFail($asignacionId);
+
+        return $query->whereHas('unidad', fn (Builder $q) => $q->where('nivel_id', $assignment->nivel_id)->whereHas('nivel'));
+    }
+
     public function for(AccessContext $context): Builder
     {
         $query = Evaluacion::query()->whereHas('rubro')->whereHas('unidad', fn (Builder $q) => $q->whereHas('nivel'));

@@ -271,7 +271,7 @@ class CatequesisAccessTest extends CatequesisTestCase
             'grupo_id' => $ids['group'], 'periodo_id' => 1, 'nivel_id' => 2,
         ]);
         $this->assertSame('AMBIGUOUS_ASSIGNMENT', $this->access()->canViewInscripcion($context, $ids['inscription'])->code);
-        $this->assertSame('AMBIGUOUS_ASSIGNMENT', $this->access()->canViewBoleta($this->context(R::Secretaria), $ids['inscription'])->code);
+        $this->assertSame('ALLOWED', $this->access()->canViewBoleta($this->context(R::Secretaria), $ids['inscription'])->code);
         $this->assertEmpty(app(AccessibleEvaluaciones::class)->for($context)->get());
     }
 

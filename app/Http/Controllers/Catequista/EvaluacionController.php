@@ -81,25 +81,9 @@ class EvaluacionController extends Controller
 
                 $alumnos = $alumnosBase->map(function ($alumno) use ($evaluaciones, $unidades, $totalRubros) {
                     $evs = $evaluaciones->where('inscripcion_id', $alumno->inscripcion_id);
-                    $promediosUnidad = [];
-                    $sumaPromedios = 0;
-                    $unidadesEvaluadas = 0;
-
-                    foreach ($unidades as $unidad) {
-                        $evsUnidad = $evs->where('unidad_id', $unidad->id);
-                        if ($evsUnidad->count() > 0 && $totalRubros > 0) {
-                            $sumaCalificaciones = $evsUnidad->sum('calificacion');
-                            $promedioUnidad = ($sumaCalificaciones / $totalRubros) * 10;
-                            $promediosUnidad[$unidad->id] = round($promedioUnidad, 2);
-                            $sumaPromedios += $promedioUnidad;
-                            $unidadesEvaluadas++;
-                        } else {
-                            $promediosUnidad[$unidad->id] = null;
-                        }
-                    }
-
-                    $alumno->promedios_unidad = $promediosUnidad;
-                    $alumno->promedio_final = $unidadesEvaluadas > 0 ? round($sumaPromedios / $unidadesEvaluadas, 2) : null;
+                    $summary = app(\App\Services\Academics\GradeSummary::class)->calculate($unidades, $evs, $totalRubros);
+                    $alumno->promedios_unidad = $summary['unidades'];
+                    $alumno->promedio_final = $summary['final'];
 
                     return $alumno;
                 });
@@ -119,9 +103,9 @@ class EvaluacionController extends Controller
                     $alumnosBase = app(AccessibleInscripciones::class)->for($context)
                         ->where('inscripciones.grupo_id', $asignacion->grupo_id)
                         ->with('alumno')->get()->map(fn ($i) => (object) [
-                        'inscripcion_id' => $i->id, 'alumno_id' => $i->alumno_id,
-                        'alumno_nombre' => $i->alumno->nombre_completo,
-                    ])->sortBy('alumno_nombre')->values();
+                            'inscripcion_id' => $i->id, 'alumno_id' => $i->alumno_id,
+                            'alumno_nombre' => $i->alumno->nombre_completo,
+                        ])->sortBy('alumno_nombre')->values();
 
                     $inscripcionesIds = $alumnosBase->pluck('inscripcion_id')->toArray();
 

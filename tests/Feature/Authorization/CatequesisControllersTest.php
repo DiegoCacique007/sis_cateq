@@ -199,7 +199,7 @@ class CatequesisControllersTest extends CatequesisWebTestCase
         $this->get('/coordinador-comunidades/boletas/generar/'.$other['inscription'])->assertNotFound();
     }
 
-    public function test_ambiguous_assignment_rejects_group_pdf_capture_and_boleta(): void
+    public function test_ambiguous_assignment_blocks_capture_but_boleta_accepts_explicit_selection(): void
     {
         $context = $this->context();
         $ids = $this->records($context);
@@ -210,7 +210,8 @@ class CatequesisControllersTest extends CatequesisWebTestCase
         }
         $this->post('/catequista/evaluaciones/guardar', $this->payload($ids))->assertStatus(409);
         $this->login($this->context(R::Secretaria));
-        $this->get('/secretaria/boletas/generar/'.$ids['inscription'].'?asignacion_id='.$ids['assignment'])->assertStatus(409);
+        $this->get('/secretaria/boletas/generar/'.$ids['inscription'].'?asignacion_id='.$ids['assignment'])->assertOk()
+            ->assertViewHas('asignacion', fn ($a) => $a->id === $ids['assignment']);
     }
 
     public function test_secretaria_report_keeps_both_communities_and_unassigned_students(): void
@@ -275,12 +276,15 @@ class CatequesisControllersTest extends CatequesisWebTestCase
         $this->assertDatabaseHas('evaluaciones', ['id' => $ids['evaluation'], 'calificacion' => 5]);
     }
 
-    public function test_boleta_rejects_student_assignment_community_mismatch(): void
+    public function test_boleta_allows_different_residence_when_academic_assignment_is_valid(): void
     {
         $ids = $this->records($this->context());
         DB::table('alumnos')->where('id', $ids['student'])->update(['comunidad_id' => 2]);
         $this->login($this->context(R::Secretaria));
-        $this->get('/secretaria/boletas/generar/'.$ids['inscription'])->assertNotFound();
+        $this->get('/secretaria/boletas/generar/'.$ids['inscription'])
+            ->assertOk()->assertViewIs('secretaria.boletas.boleta_pdf')
+            ->assertViewHas('asignacion', fn ($a) => (int) $a->id === (int) $ids['assignment'])
+            ->assertViewHas('inscripcion', fn ($i) => (int) $i->id === (int) $ids['inscription']);
     }
 
     public function test_absent_period_has_visible_message_without_redirect_loop(): void
