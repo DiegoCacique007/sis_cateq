@@ -33,7 +33,7 @@ class CuentasUsuarioTest extends CatequesisWebTestCase
 
         $this->actingAs($secretaria)->get(route('secretaria.usuarios.index'))
             ->assertOk()
-            ->assertSee('Cuentas de usuario')
+            ->assertSee('Gestión de usuarios')
             ->assertSeeInOrder(['Cuenta bloqueada', 'Cuenta catequista', 'Cuenta coordinador_comunidades', 'Cuenta coordinador_general', 'Cuenta parroco', 'Solicitud pendiente'])
             ->assertSee(['Pendiente', 'Aprobada', 'Bloqueada'])
             ->assertSee(['Secretaría', 'Catequista', 'Párroco', 'Coordinador General', 'Coordinador de Comunidades', 'Sin rol asignado'])

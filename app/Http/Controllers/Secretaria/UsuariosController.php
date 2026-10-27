@@ -13,7 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/** «Cuentas de usuario»: lista de todas las cuentas y acciones de Secretaría sobre ellas. */
+/** Gestión unificada de cuentas y solicitudes de acceso. */
 class UsuariosController extends Controller
 {
     private const ESTADOS = ['pendiente', 'aprobado', 'bloqueado'];
@@ -22,8 +22,13 @@ class UsuariosController extends Controller
     {
         abort_unless($request->user()->operationalRole() === UserRole::Secretaria, 403);
 
-        $roles = [...array_map(fn (UserRole $role) => $role->value, UserRole::cases()), 'usuario'];
+        $operativos = array_map(fn (UserRole $role) => $role->value, UserRole::cases());
+        $roles = [...$operativos, 'usuario'];
+        $seccion = in_array($request->query('seccion'), ['todos', 'pendientes', 'activos', 'inactivos'], true) ? $request->query('seccion') : 'todos';
         $estado = in_array($request->query('estado'), self::ESTADOS, true) ? $request->query('estado') : '';
+        if ($seccion !== 'todos') {
+            $estado = '';
+        }
         $rol = in_array($request->query('rol'), $roles, true) ? $request->query('rol') : '';
         $buscar = is_string($request->query('buscar')) ? mb_substr(trim($request->query('buscar')), 0, 100) : '';
         $perPage = (int) $request->query('per_page', 25);
@@ -31,10 +36,19 @@ class UsuariosController extends Controller
             $perPage = 25;
         }
         $periodoId = session('periodo_activo_id');
+        $resumen = [
+            'todos' => User::count(),
+            'pendientes' => User::where('status', 'pendiente')->count(),
+            'activos' => User::where('status', 'aprobado')->whereIn('role', $operativos)->count(),
+            'inactivos' => User::where('status', 'bloqueado')->count(),
+        ];
 
         $usuarios = User::query()
             ->with('comunidad')
             ->withCount(['asignacionesGrupo as grupos_periodo_actual' => fn ($query) => $query->where('periodo_id', $periodoId)])
+            ->when($seccion === 'pendientes', fn ($query) => $query->where('status', 'pendiente'))
+            ->when($seccion === 'activos', fn ($query) => $query->where('status', 'aprobado')->whereIn('role', $operativos))
+            ->when($seccion === 'inactivos', fn ($query) => $query->where('status', 'bloqueado'))
             ->when($estado !== '', fn ($query) => $query->where('status', $estado))
             ->when($rol !== '', fn ($query) => $query->where('role', $rol))
             ->when($buscar !== '', function ($query) use ($buscar) {
@@ -46,7 +60,7 @@ class UsuariosController extends Controller
             ->withQueryString();
         $comunidades = Comunidad::orderBy('comunidad')->get(['id', 'comunidad']);
 
-        return view('secretaria.usuarios.index', compact('usuarios', 'comunidades', 'estado', 'rol', 'buscar', 'perPage'));
+        return view('secretaria.usuarios.index', compact('usuarios', 'comunidades', 'estado', 'rol', 'buscar', 'perPage', 'seccion', 'resumen'));
     }
 
     public function reactivar(Request $request, User $user, AccountManager $accounts): RedirectResponse

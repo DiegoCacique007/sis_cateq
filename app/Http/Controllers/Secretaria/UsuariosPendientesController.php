@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Secretaria;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
-use App\Models\Secretaria\Comunidad;
 use App\Models\User;
 use App\Services\Accounts\AccountActionRejected;
 use App\Services\Accounts\AccountManager;
@@ -13,16 +12,14 @@ use Illuminate\Validation\Rule;
 
 class UsuariosPendientesController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         abort_unless(auth()->user()->operationalRole() === UserRole::Secretaria, 403);
 
-        $pendientes = User::where('status', 'pendiente')
-            ->orderBy('created_at', 'desc')
-            ->get();
-        $comunidades = Comunidad::orderBy('comunidad')->get(['id', 'comunidad']);
+        // Alias compatible para enlaces antiguos y orientación del chatbot.
+        $request->merge(['seccion' => 'pendientes']);
 
-        return view('secretaria.usuarios_pendientes', compact('pendientes', 'comunidades'));
+        return app(UsuariosController::class)->index($request);
     }
 
     public function aprobar(Request $request, User $user)
